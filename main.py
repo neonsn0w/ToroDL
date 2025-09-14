@@ -1,7 +1,8 @@
-import telebot
 import os
-from dotenv import load_dotenv
 import time
+
+import telebot
+from dotenv import load_dotenv
 
 import toolbox as util
 
@@ -10,10 +11,6 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 bot = telebot.TeleBot(BOT_TOKEN)
-
-@bot.message_handler(commands=['migliorsistemaoperativo'])
-def caccaos(message):
-    bot.reply_to(message, "Il miglior sistema operativo è CasaOS")
 
 
 @bot.message_handler(commands=['start'])
@@ -28,23 +25,33 @@ def echo_all(message):
     if "https://" in message.text:
         url = util.extract_https_url(message.text)
         if util.is_supported_website(url):
+            filename = "video.mp4"
+
             if "youtube.com" in url or "youtu.be" in url:
                 url = util.get_video_url(util.get_video_id(url))
 
-                if util.is_video_longer_than_5m(url):
+                filename = util.get_video_id(url) + ".mp4"
+
+                if util.is_video_longer_than(url, 420):  # 7 minutes
                     return
 
             sent_msg = bot.reply_to(message, ">.< | Downloading...")
 
-            util.download_video(url)
+            if "youtube.com" in url or "youtu.be" in url:
+                if util.is_video_longer_than(url, 120):
+                    util.download_video_720(url, filename)
+                else:
+                    util.download_video(url, filename)
+            else:
+                util.download_video(url, filename)
 
-            if "video.mp4" and os.path.exists("video.mp4"):
-                if util.is_file_smaller_than_50mb("video.mp4"):
+            if filename and os.path.exists(filename):
+                if util.is_file_smaller_than_50mb(filename):
                     try:
                         bot.edit_message_text("=w= Uploading...", chat_id=message.chat.id,
                                               message_id=sent_msg.message_id)
 
-                        with open("video.mp4", 'rb') as video_file:
+                        with open(filename, 'rb') as video_file:
                             bot.send_video(
                                 chat_id=message.chat.id,
                                 video=video_file,
@@ -54,24 +61,27 @@ def echo_all(message):
                             )
 
                         bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
-                        os.remove("video.mp4")
+                        os.remove(filename)
                     except Exception as e:
-                        bot.edit_message_text("qmq | Error uploading!", chat_id=message.chat.id, message_id=sent_msg.message_id)
+                        bot.edit_message_text("qmq | Error uploading!", chat_id=message.chat.id,
+                                              message_id=sent_msg.message_id)
                         time.sleep(3)
                         bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
 
-                        os.remove("video.mp4")
+                        os.remove(filename)
 
                 else:
                     bot.edit_message_text("O.O | Too big!", chat_id=message.chat.id, message_id=sent_msg.message_id)
                     time.sleep(3)
                     bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
 
-                    os.remove("video.mp4")
+                    os.remove(filename)
 
             else:
-                bot.edit_message_text("qmq | Error downloading!", chat_id=message.chat.id, message_id=sent_msg.message_id)
+                bot.edit_message_text("qmq | Error downloading!", chat_id=message.chat.id,
+                                      message_id=sent_msg.message_id)
                 time.sleep(3)
                 bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
+
 
 bot.infinity_polling()

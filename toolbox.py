@@ -1,6 +1,7 @@
-import re
-import yt_dlp
 import os
+import re
+
+import yt_dlp
 
 SUPPORTED_WEBSITES = [
     "youtube.com",
@@ -13,12 +14,15 @@ SUPPORTED_WEBSITES = [
     # "redd.it"
 ]
 
-def is_supported_website(msg):
+
+def is_supported_website(msg: str) -> bool:
     return any(website in msg for website in SUPPORTED_WEBSITES)
 
-def extract_https_url(text):
+
+def extract_https_url(text: str) -> str:
     match = re.search(r'https://[^\s]+', text)
     return match.group(0) if match else None
+
 
 def get_video_id(url: str) -> str:
     if "youtu.be" in url:
@@ -34,7 +38,8 @@ def get_video_id(url: str) -> str:
 def get_video_url(video_id: str) -> str:
     return f"https://www.youtube.com/watch?v={video_id}"
 
-def is_video_longer_than_5m(url):
+
+def is_video_longer_than(url: str, time: int) -> bool:
     ydl_opts = {
         "quiet": True,  # Suppress output
         "no_warnings": True,
@@ -46,21 +51,32 @@ def is_video_longer_than_5m(url):
             info = ydl.extract_info(url, download=False)
             duration = info.get("duration")
             if duration:
-                return duration > 300
+                return duration > time
             else:
                 return False  # Duration missing (livestreams)
         except Exception as e:
             print(f"Error: {e}")
             return False
 
-def download_video(link):
+
+def download_video(link: str, filename: str):
     youtube_dl_options = {
         "format": "bv[ext=mp4]+ba[ext=m4a]/b[ext=mp4]",
-        "outtmpl": "video.mp4",
+        "outtmpl": filename,
         "cookiefile": "cookies.txt",
     }
     with yt_dlp.YoutubeDL(youtube_dl_options) as ydl:
         return ydl.download([link])
 
-def is_file_smaller_than_50mb(file_path):
+def download_video_720(link: str, filename: str):
+    youtube_dl_options = {
+        "format": "bv[height<=720][ext=mp4]+ba[ext=m4a]/b[ext=mp4][height<=720]",
+        "outtmpl": filename,
+        "cookiefile": "cookies.txt",
+    }
+    with yt_dlp.YoutubeDL(youtube_dl_options) as ydl:
+        return ydl.download([link])
+
+
+def is_file_smaller_than_50mb(file_path: str) -> bool:
     return os.path.getsize(file_path) < 50 * 1024 * 1024
