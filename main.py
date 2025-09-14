@@ -22,28 +22,61 @@ def start(message):
 
 @bot.message_handler(func=lambda msg: True)
 def echo_all(message):
+    if "bigrat.monster" in message.text:
+        if os.path.exists("bigrat.jpg"):
+            with open("bigrat.jpg", "rb") as f:
+                bot.send_photo(message.chat.id, f, reply_to_message_id=message.message_id)
+
+        return
+
     if "https://" in message.text:
         url = util.extract_https_url(message.text)
         if util.is_supported_website(url):
             filename = "video.mp4"
 
             if "youtube.com" in url or "youtu.be" in url:
-                url = util.get_video_url(util.get_video_id(url))
+                try:
+                    url = util.get_yt_video_url(util.get_yt_video_id(url))
 
-                filename = util.get_video_id(url) + ".mp4"
+                    filename = util.get_yt_video_id(url) + ".mp4"
 
-                if util.is_video_longer_than(url, 420):  # 7 minutes
+                    if util.is_video_longer_than(url, 420):  # 7 minutes
+                        return
+                except Exception as e:
+                    return
+            elif "x.com" in url or "twitter.com" in url:
+                try:
+                    filename = util.get_x_status_id(url) + ".mp4"
+                except Exception as e:
+                    return
+            elif "tiktok.com" in url:
+                try:
+                    filename = util.get_tiktok_video_id(url) + ".mp4"
+                except Exception as e:
+                    return
+            elif "instagram.com" in url:
+                try:
+                    filename = util.get_ig_video_id(url) + ".mp4"
+                except Exception as e:
                     return
 
             sent_msg = bot.reply_to(message, ">.< | Downloading...")
 
-            if "youtube.com" in url or "youtu.be" in url:
-                if util.is_video_longer_than(url, 120):
-                    util.download_video_720(url, filename)
+            try:
+                if "youtube.com" in url or "youtu.be" in url:
+                    if util.is_video_longer_than(url, 120):
+                        util.download_video_720(url, filename)
+                    else:
+                        util.download_video(url, filename)
                 else:
                     util.download_video(url, filename)
-            else:
-                util.download_video(url, filename)
+            except Exception as e:
+                print(e)
+                bot.edit_message_text("qmq | Error downloading!", chat_id=message.chat.id,
+                                      message_id=sent_msg.message_id)
+                time.sleep(3)
+                bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
+                return
 
             if filename and os.path.exists(filename):
                 if util.is_file_smaller_than_50mb(filename):

@@ -6,10 +6,10 @@ import yt_dlp
 SUPPORTED_WEBSITES = [
     "youtube.com",
     "youtu.be",
-    # "twitter.com",
-    # "x.com",
-    # "tiktok.com",
-    # "instagram.com",
+    "twitter.com",
+    "x.com",
+    "tiktok.com",
+    "instagram.com",
     # "reddit.com",
     # "redd.it"
 ]
@@ -24,7 +24,7 @@ def extract_https_url(text: str) -> str:
     return match.group(0) if match else None
 
 
-def get_video_id(url: str) -> str:
+def get_yt_video_id(url: str) -> str:
     if "youtu.be" in url:
         return re.search(r'youtu.be/(.{11})', url).group(1)
 
@@ -35,8 +35,26 @@ def get_video_id(url: str) -> str:
     return match.group(1) if match else None
 
 
-def get_video_url(video_id: str) -> str:
+def get_yt_video_url(video_id: str) -> str:
     return f"https://www.youtube.com/watch?v={video_id}"
+
+
+def get_x_status_id(url: str) -> str:
+    return re.search(r'status/(.{18})', url).group(1)
+
+
+def get_tiktok_video_id(url: str) -> str:
+    return re.search(r'tiktok.com/(.{9})', url).group(1)
+
+
+def get_ig_video_id(url: str) -> str:
+    if "reel/" in url:
+        return re.search(r'reel/(.{11})', url).group(1)
+
+    if "reels/" in url:
+        return re.search(r'reels/(.{11})', url).group(1)
+
+    return re.search(r'/p/(.{9})', url).group(1)
 
 
 def is_video_longer_than(url: str, time: int) -> bool:
@@ -67,6 +85,7 @@ def download_video(link: str, filename: str):
     }
     with yt_dlp.YoutubeDL(youtube_dl_options) as ydl:
         return ydl.download([link])
+
 
 def download_video_720(link: str, filename: str):
     youtube_dl_options = {
