@@ -10,8 +10,8 @@ SUPPORTED_WEBSITES = [
     "x.com",
     "tiktok.com",
     "instagram.com",
-    # "reddit.com",
-    # "redd.it"
+    "reddit.com",
+    "redd.it"
 ]
 
 
