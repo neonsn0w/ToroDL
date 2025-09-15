@@ -32,35 +32,19 @@ def echo_all(message):
     if "https://" in message.text:
         url = util.extract_https_url(message.text)
         if util.is_supported_website(url):
-            filename = "video.mp4"
-
             if "youtube.com" in url or "youtu.be" in url:
                 try:
                     url = util.get_yt_video_url(util.get_yt_video_id(url))
-
-                    filename = util.get_yt_video_id(url) + ".mp4"
 
                     if util.is_video_longer_than(url, 420):  # 7 minutes
                         return
                 except Exception as e:
                     return
-            elif "x.com" in url or "twitter.com" in url:
-                try:
-                    filename = util.get_x_status_id(url) + ".mp4"
-                except Exception as e:
-                    return
-            elif "tiktok.com" in url:
-                try:
-                    filename = util.get_tiktok_video_id(url) + ".mp4"
-                except Exception as e:
-                    return
-            elif "instagram.com" in url:
-                try:
-                    filename = util.get_ig_video_id(url) + ".mp4"
-                except Exception as e:
-                    return
-            elif "reddit.com" in url or "redd.it" in url:
-                filename = "reddit" + time.strftime("%H%M%S") + ".mp4"
+
+            filename = util.get_filename(url, "mp4")
+
+            if filename == "-1":
+                return
 
             sent_msg = bot.reply_to(message, ">.< | Downloading...")
 
@@ -96,7 +80,7 @@ def echo_all(message):
                             )
 
                         bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
-                        # os.remove(filename)
+                        os.remove(filename)
                     except Exception as e:
                         bot.edit_message_text("qmq | Error uploading!", chat_id=message.chat.id,
                                               message_id=sent_msg.message_id)

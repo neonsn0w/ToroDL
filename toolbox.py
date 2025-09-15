@@ -1,5 +1,6 @@
 import os
 import re
+import time
 
 import yt_dlp
 
@@ -55,6 +56,27 @@ def get_ig_video_id(url: str) -> str:
         return re.search(r'reels/(.{11})', url).group(1)
 
     return re.search(r'/p/(.{9})', url).group(1)
+
+
+def get_filename(url: str, ext: str) -> str:
+    if ext.startswith("."):
+        ext = ext[1:]  # removes first char
+
+    try:
+        if "youtube.com" in url or "youtu.be" in url:
+            return get_yt_video_id(url) + "." + ext
+        elif "x.com" in url or "twitter.com" in url:
+            return get_x_status_id(url) + "." + ext
+        elif "tiktok.com" in url:
+            return get_tiktok_video_id(url) + "." + ext
+        elif "instagram.com" in url:
+            return get_ig_video_id(url) + "." + ext
+        elif "reddit.com" in url or "redd.it" in url:
+            return "reddit" + time.strftime("%H%M%S") + "." + ext
+        else:
+            return "-1"
+    except Exception as e:
+        return "-1"
 
 
 def is_video_longer_than(url: str, time: int) -> bool:
