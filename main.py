@@ -1,6 +1,5 @@
 import os
 import time
-import platform
 
 import telebot
 from dotenv import load_dotenv
@@ -13,10 +12,6 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
-print("Bot running on " + platform.platform())
-
-if platform.system() == "Linux":
-    os.system("rm *.mp4")
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -63,7 +58,7 @@ def echo_all(message):
                     util.download_video(url, filename)
             except Exception as e:
                 print(e)
-                bot.edit_message_text("qmq | Error downloading!", chat_id=message.chat.id,
+                bot.edit_message_text("ᇂ_ᇂ | I made a fucky wuky while downloading!", chat_id=message.chat.id,
                                       message_id=sent_msg.message_id)
                 time.sleep(3)
                 bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
@@ -80,14 +75,15 @@ def echo_all(message):
                                 chat_id=message.chat.id,
                                 video=video_file,
                                 supports_streaming=True,
-                                caption="Here's your video >w<\n" + url,
+                                caption="Here's your [video](" + url + ") >w<",
+                                parse_mode="Markdown",
                                 reply_to_message_id=message.message_id
                             )
 
                         bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
                         os.remove(filename)
                     except Exception as e:
-                        bot.edit_message_text("qmq | Error uploading!", chat_id=message.chat.id,
+                        bot.edit_message_text("(⋟﹏⋞) | Error uploading!", chat_id=message.chat.id,
                                               message_id=sent_msg.message_id)
                         time.sleep(3)
                         bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
@@ -95,14 +91,14 @@ def echo_all(message):
                         os.remove(filename)
 
                 else:
-                    bot.edit_message_text("O.O | Too big!", chat_id=message.chat.id, message_id=sent_msg.message_id)
+                    bot.edit_message_text("༼ つ ‿ ༽つ╰⋃╯ | Too big!", chat_id=message.chat.id, message_id=sent_msg.message_id)
                     time.sleep(3)
                     bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
 
                     os.remove(filename)
 
             else:
-                bot.edit_message_text("qmq | Error downloading!", chat_id=message.chat.id,
+                bot.edit_message_text("╥﹏╥ | Error downloading!", chat_id=message.chat.id,
                                       message_id=sent_msg.message_id)
                 time.sleep(3)
                 bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
