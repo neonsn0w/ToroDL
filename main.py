@@ -1,5 +1,6 @@
 import os
 import time
+import platform
 
 import telebot
 from dotenv import load_dotenv
@@ -12,6 +13,10 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
+print("Bot running on " + platform.platform())
+
+if platform.system() == "Linux":
+    os.system("rm *.mp4")
 
 @bot.message_handler(commands=['start'])
 def start(message):
