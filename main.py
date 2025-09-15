@@ -60,7 +60,7 @@ def echo_all(message):
                 except Exception as e:
                     return
             elif "reddit.com" in url or "redd.it" in url:
-                filename = f"reddit{time.strftime("%H%M%S")}.mp4"
+                filename = "reddit" + time.strftime("%H%M%S") + ".mp4"
 
             sent_msg = bot.reply_to(message, ">.< | Downloading...")
 
@@ -96,7 +96,7 @@ def echo_all(message):
                             )
 
                         bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
-                        #os.remove(filename)
+                        # os.remove(filename)
                     except Exception as e:
                         bot.edit_message_text("qmq | Error uploading!", chat_id=message.chat.id,
                                               message_id=sent_msg.message_id)
