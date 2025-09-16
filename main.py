@@ -73,7 +73,7 @@ def echo_all(message):
             if filename and os.path.exists(filename):
                 if util.is_file_smaller_than_50mb(filename):
                     try:
-                        bot.edit_message_text("=w= Uploading...", chat_id=message.chat.id,
+                        bot.edit_message_text("=w= | Uploading...", chat_id=message.chat.id,
                                               message_id=sent_msg.message_id)
 
                         with open(filename, 'rb') as video_file:
