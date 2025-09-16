@@ -2,6 +2,7 @@ import os
 import re
 import time
 
+import instaloader
 import yt_dlp
 
 SUPPORTED_WEBSITES = [
@@ -55,7 +56,7 @@ def get_ig_video_id(url: str) -> str:
     if "reels/" in url:
         return re.search(r'reels/(.{11})', url).group(1)
 
-    return re.search(r'/p/(.{9})', url).group(1)
+    return re.search(r'/p/(.{11})', url).group(1)
 
 
 def get_filename(url: str, ext: str) -> str:
@@ -108,6 +109,23 @@ def download_video(link: str, filename: str):
     with yt_dlp.YoutubeDL(youtube_dl_options) as ydl:
         return ydl.download([link])
 
+
+def download_ig_pics(url: str, folder: str):
+    L = instaloader.Instaloader(
+        dirname_pattern=folder,
+        filename_pattern="{shortcode}",
+        download_pictures=True,
+        download_videos=False,
+        download_video_thumbnails=False,
+        download_geotags=False,
+        download_comments=False,
+        save_metadata=False,
+        compress_json=False
+    )
+
+    post = instaloader.Post.from_shortcode(L.context, get_ig_video_id(url))
+
+    L.download_post(post, folder)
 
 def download_video_720(link: str, filename: str):
     youtube_dl_options = {

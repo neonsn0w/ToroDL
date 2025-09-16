@@ -1,9 +1,11 @@
+import glob
 import os
 import platform
 import time
 
 import telebot
 from dotenv import load_dotenv
+from telebot.types import InputMediaPhoto
 
 import toolbox as util
 
@@ -64,11 +66,27 @@ def echo_all(message):
                     util.download_video(url, filename)
             except Exception as e:
                 print(e)
-                bot.edit_message_text("*ᇂ_ᇂ | Error downloading!*", chat_id=message.chat.id,
-                                      message_id=sent_msg.message_id, parse_mode="Markdown")
-                time.sleep(3)
-                bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
-                return
+                if "There is no video in this post" in str(e) and "instagram.com" in url:
+                    bot.edit_message_text("*⇀‸↼ | Let's try with images...*", chat_id=message.chat.id,
+                                          message_id=sent_msg.message_id, parse_mode="Markdown")
+                    try:
+                        ig_img_routine(message, url)
+                        bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
+                        return
+
+                    except Exception as e:
+                        print(e)
+                        bot.edit_message_text("*ᇂ_ᇂ | Error downloading!*", chat_id=message.chat.id,
+                                              message_id=sent_msg.message_id, parse_mode="Markdown")
+                        time.sleep(3)
+                        bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
+                        return
+                else:
+                    bot.edit_message_text("*ᇂ_ᇂ | Error downloading!*", chat_id=message.chat.id,
+                                          message_id=sent_msg.message_id, parse_mode="Markdown")
+                    time.sleep(3)
+                    bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
+                    return
 
             if filename and os.path.exists(filename):
                 if util.is_file_smaller_than_50mb(filename):
@@ -105,10 +123,58 @@ def echo_all(message):
                     os.remove(filename)
 
             else:
-                bot.edit_message_text("*╥﹏╥ | Error downloading!*", chat_id=message.chat.id,
-                                      message_id=sent_msg.message_id, parse_mode="Markdown")
-                time.sleep(3)
-                bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
+                if "instagram.com" in url:
+                    bot.edit_message_text("*⇀‸↼ | Let's try with images...*", chat_id=message.chat.id,
+                                          message_id=sent_msg.message_id, parse_mode="Markdown")
+                    try:
+                        ig_img_routine(message, url)
+                        bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
+                        return
+
+                    except Exception as e:
+                        print(e)
+                        bot.edit_message_text("*ᇂ_ᇂ | Error downloading!*", chat_id=message.chat.id,
+                                              message_id=sent_msg.message_id, parse_mode="Markdown")
+                        time.sleep(3)
+                        bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
+                        return
+                else:
+                    bot.edit_message_text("*╥﹏╥ | Error downloading!*", chat_id=message.chat.id,
+                                          message_id=sent_msg.message_id, parse_mode="Markdown")
+                    time.sleep(3)
+                    bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
+
+
+def ig_img_routine(message, url):
+    util.download_ig_pics(url, "ig_img_dl")
+
+    jpgs = [
+        f for f in os.listdir("ig_img_dl")
+        if f.startswith(util.get_ig_video_id(url)) and f.lower().endswith('.jpg')
+    ]
+
+    jpgs.sort()
+    file_objects = []
+    medias = []
+
+    for i, f in enumerate(jpgs):
+        file_path = os.path.join("ig_img_dl", f)
+        photo_file = open(file_path, 'rb')
+        file_objects.append(photo_file)
+        if i == 0:
+            medias.append(
+                InputMediaPhoto(photo_file, caption="Here's your [photo(s)](" + url + ") >w<", parse_mode="Markdown"))
+        else:
+            medias.append(InputMediaPhoto(photo_file))
+
+    bot.send_media_group(chat_id=message.chat.id, media=medias, reply_to_message_id=message.message_id)
+
+    for file_obj in file_objects:
+        file_obj.close()
+
+    for filename in glob.glob("ig_img_dl/" + util.get_ig_video_id(url) + "*"):
+        os.remove(filename)
+    return
 
 
 bot.infinity_polling()
