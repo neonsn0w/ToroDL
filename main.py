@@ -182,6 +182,10 @@ def ig_img_routine(message, url):
         if i == 0:
             medias.append(
                 InputMediaPhoto(photo_file, caption="Here's your [photo(s)](" + url + ") >w<", parse_mode="Markdown"))
+        elif i == 10:
+            bot.send_media_group(chat_id=message.chat.id, media=medias, reply_to_message_id=message.message_id)
+            medias = []
+            medias.append(InputMediaPhoto(photo_file))
         else:
             medias.append(InputMediaPhoto(photo_file))
 
