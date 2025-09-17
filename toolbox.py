@@ -12,8 +12,8 @@ SUPPORTED_WEBSITES = [
     "x.com",
     "tiktok.com",
     "instagram.com",
-    # "reddit.com",
-    # "redd.it"
+    "reddit.com",
+    "redd.it"
 ]
 
 
@@ -58,6 +58,11 @@ def get_ig_video_id(url: str) -> str:
 
     return re.search(r'/p/(.{11})', url).group(1)
 
+def get_reddit_id(url: str) -> str:
+    if "comments/" in url:
+        return re.search(r'comments/(.{7})', url).group(1)
+
+    return re.search(r'/s/(.{10)', url).group(1)
 
 def get_platform_video_id(url: str) -> str:
     if "youtube.com" in url or "youtu.be" in url:
@@ -68,6 +73,8 @@ def get_platform_video_id(url: str) -> str:
         return get_tiktok_video_id(url)
     elif "instagram.com" in url:
         return get_ig_video_id(url)
+    elif "reddit.com" in url or "redd.it" in url:
+        return get_reddit_id(url)
     else:
         return "-1"
 
@@ -86,7 +93,7 @@ def get_filename(url: str, ext: str) -> str:
         elif "instagram.com" in url:
             return get_ig_video_id(url) + "." + ext
         elif "reddit.com" in url or "redd.it" in url:
-            return "reddit" + time.strftime("%H%M%S") + "." + ext
+            return get_reddit_id(url) + "." + ext
         else:
             return "-1"
     except Exception as e:
