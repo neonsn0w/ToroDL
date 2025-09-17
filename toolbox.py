@@ -12,8 +12,8 @@ SUPPORTED_WEBSITES = [
     "x.com",
     "tiktok.com",
     "instagram.com",
-    "reddit.com",
-    "redd.it"
+    # "reddit.com",
+    # "redd.it"
 ]
 
 
@@ -57,6 +57,19 @@ def get_ig_video_id(url: str) -> str:
         return re.search(r'reels/(.{11})', url).group(1)
 
     return re.search(r'/p/(.{11})', url).group(1)
+
+
+def get_platform_video_id(url: str) -> str:
+    if "youtube.com" in url or "youtu.be" in url:
+        return get_yt_video_id(url)
+    elif "twitter.com" in url or "x.com" in url:
+        return get_x_status_id(url)
+    elif "tiktok.com" in url:
+        return get_tiktok_video_id(url)
+    elif "instagram.com" in url:
+        return get_ig_video_id(url)
+    else:
+        return "-1"
 
 
 def get_filename(url: str, ext: str) -> str:
@@ -126,6 +139,7 @@ def download_ig_pics(url: str, folder: str):
     post = instaloader.Post.from_shortcode(L.context, get_ig_video_id(url))
 
     L.download_post(post, folder)
+
 
 def download_video_720(link: str, filename: str):
     youtube_dl_options = {

@@ -1,3 +1,5 @@
 .env
 .idea
 cookies.txt
+video_ids.db
+video_ids.db-journal

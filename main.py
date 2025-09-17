@@ -7,6 +7,7 @@ import telebot
 from dotenv import load_dotenv
 from telebot.types import InputMediaPhoto
 
+import dbtools
 import toolbox as util
 
 load_dotenv()
@@ -14,6 +15,8 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 bot = telebot.TeleBot(BOT_TOKEN)
+
+dbtools.prepare_db() # Creates the DB if not present
 
 print("Bot running on " + platform.platform())
 
@@ -40,6 +43,18 @@ def echo_all(message):
     if "https://" in message.text:
         url = util.extract_https_url(message.text)
         if util.is_supported_website(url):
+            if dbtools.check_if_video_is_present(util.get_platform_video_id(url)):
+                bot.send_video(
+                    chat_id=message.chat.id,
+                    video=dbtools.get_video(util.get_platform_video_id(url)),
+                    supports_streaming=True,
+                    caption="Here's your [video](" + url + ") >w<",
+                    parse_mode="Markdown",
+                    reply_to_message_id=message.message_id
+                )
+
+                return
+
             if "youtube.com" in url or "youtu.be" in url:
                 try:
                     url = util.get_yt_video_url(util.get_yt_video_id(url))
@@ -95,7 +110,7 @@ def echo_all(message):
                                               message_id=sent_msg.message_id)
 
                         with open(filename, 'rb') as video_file:
-                            bot.send_video(
+                            response = bot.send_video(
                                 chat_id=message.chat.id,
                                 video=video_file,
                                 supports_streaming=True,
@@ -105,6 +120,9 @@ def echo_all(message):
                             )
 
                         bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
+
+                        dbtools.add_video(response.video.file_id, util.get_platform_video_id(url))
+
                         os.remove(filename)
                     except Exception as e:
                         bot.edit_message_text("*(⋟﹏⋞) | Error uploading!*", chat_id=message.chat.id,
