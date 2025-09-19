@@ -16,7 +16,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
-dbtools.prepare_db() # Creates the DB if not present
+dbtools.prepare_db()  # Creates the DB if not present
 
 print("Bot running on " + platform.platform())
 
@@ -97,8 +97,12 @@ def echo_all(message):
                         bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
                         return
                 else:
-                    bot.edit_message_text("*ᇂ_ᇂ | Error downloading!*", chat_id=message.chat.id,
-                                          message_id=sent_msg.message_id, parse_mode="Markdown")
+                    if "18 years" in str(e):
+                        bot.edit_message_text("*ᇂ_ᇂ | This video is age restricted!*", chat_id=message.chat.id,
+                                              message_id=sent_msg.message_id, parse_mode="Markdown")
+                    else:
+                        bot.edit_message_text("*ᇂ_ᇂ | Error downloading!*", chat_id=message.chat.id,
+                                              message_id=sent_msg.message_id, parse_mode="Markdown")
                     time.sleep(3)
                     bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
                     return
