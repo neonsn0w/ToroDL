@@ -26,16 +26,16 @@ if platform.system() == "Linux":
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    if os.path.exists("huh-toro.jpg"):
-        with open("huh-toro.jpg", "rb") as f:
+    if os.path.exists("ig_img_dl/huh-toro.jpg"):
+        with open("ig_img_dl/huh-toro.jpg", "rb") as f:
             bot.send_photo(message.chat.id, f, reply_to_message_id=message.message_id)
 
 
 @bot.message_handler(func=lambda msg: True)
 def echo_all(message):
     if "bigrat.monster" in message.text:
-        if os.path.exists("bigrat.jpg"):
-            with open("bigrat.jpg", "rb") as f:
+        if os.path.exists("ig_img_dl/bigrat.jpg"):
+            with open("ig_img_dl/bigrat.jpg", "rb") as f:
                 bot.send_photo(message.chat.id, f, reply_to_message_id=message.message_id)
 
         return
