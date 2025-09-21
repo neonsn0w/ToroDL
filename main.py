@@ -5,7 +5,7 @@ import time
 
 import telebot
 from dotenv import load_dotenv
-from telebot.types import InputMediaPhoto
+from telebot.types import InputMediaPhoto, InlineQueryResultPhoto, InlineQueryResultVideo
 
 import dbtools
 import toolbox as util
@@ -13,6 +13,7 @@ import toolbox as util
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+PRIVATE_CHANNEL_ID = os.getenv("PRIVATE_CHANNEL_ID")
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -22,6 +23,104 @@ print("Bot running on " + platform.platform())
 
 if platform.system() == "Linux":
     os.system("rm *.mp4")
+
+
+@bot.inline_handler(lambda query: True)
+def inline_handler(query):
+    results = []
+    if "bigrat.monster" in query.query:
+        if os.path.exists("img/bigrat.jpg"):
+            with open("img/bigrat.jpg", "rb") as f:
+                photoinfo = bot.send_photo(PRIVATE_CHANNEL_ID, f)
+
+            results.append(InlineQueryResultPhoto(
+                id=query.from_user.id,
+                title="big rat",
+                photo_url=photoinfo.photo[-1].file_id,
+                thumbnail_url=photoinfo.photo[0].file_id
+            ))
+
+    if query.query.lower() == "huh":
+        if os.path.exists("img/huh-toro.jpg"):
+            with open("img/huh-toro.jpg", "rb") as f:
+                photoinfo = bot.send_photo(PRIVATE_CHANNEL_ID, f)
+
+            results.append(InlineQueryResultPhoto(
+                id=query.from_user.id,
+                title="huh",
+                photo_url=photoinfo.photo[-1].file_id,
+                thumbnail_url=photoinfo.photo[0].file_id
+            ))
+
+    if "https://" in query.query:
+        url = util.extract_https_url(query.query)
+        if util.is_supported_website(url):
+            if dbtools.check_if_video_is_present(util.get_platform_video_id(url)):
+                results.append(InlineQueryResultVideo(
+                    id=query.from_user.id,
+                    video_url=dbtools.get_video(util.get_platform_video_id(url)),
+                    title="video",
+                    mime_type="video/mp4",
+                    caption="Here's your [video](" + url + ") >w<",
+                    thumbnail_url="AgACAgQAAxkDAAIFpGjJ1FpfMEjVL5lLpI4wUPGmYMnfAAIQxjEbl_5RUvHasvEQXWLnAQADAgADeAADNgQ",
+                    parse_mode="Markdown"
+                ))
+
+            if "youtube.com" in url or "youtu.be" in url:
+                try:
+                    url = util.get_yt_video_url(util.get_yt_video_id(url))
+
+                    if util.is_video_longer_than(url, 420):  # 7 minutes
+                        return
+                except Exception as e:
+                    return
+
+            filename = util.get_filename(url, "mp4")
+
+            if filename == "-1":
+                return
+
+            try:
+                if "youtube.com" in url or "youtu.be" in url:
+                    if util.is_video_longer_than(url, 120):
+                        util.download_video_720(url, filename)
+                    else:
+                        util.download_video(url, filename)
+                else:
+                    util.download_video(url, filename)
+            except Exception as e:
+                print(e)
+                return
+
+            if filename and os.path.exists(filename):
+                if util.is_file_smaller_than_50mb(filename):
+                    try:
+                        with open(filename, 'rb') as video_file:
+                            response = bot.send_video(
+                                chat_id=PRIVATE_CHANNEL_ID,
+                                video=video_file,
+                                supports_streaming=True
+                            )
+
+                        results.append(InlineQueryResultVideo(
+                            id=query.from_user.id,
+                            video_url=response.video.file_id,
+                            title="video",
+                            mime_type="video/mp4",
+                            caption="Here's your [video](" + url + ") >w<",
+                            thumbnail_url="",
+                            parse_mode="Markdown"
+                        ))
+
+                        dbtools.add_video(response.video.file_id, util.get_platform_video_id(url))
+
+                        os.remove(filename)
+                    except Exception as e:
+                        print(e)
+                        return
+
+    if len(results) > 0:
+        bot.answer_inline_query(query.id, results)
 
 
 @bot.message_handler(commands=['start'])
