@@ -122,7 +122,7 @@ def is_video_longer_than(url: str, time: int) -> bool:
 
 def download_video(link: str, filename: str):
     youtube_dl_options = {
-        "format": "bv[ext=mp4]+ba[ext=m4a]/b[ext=mp4]",
+        "format": "bv[ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4]",
         "outtmpl": filename,
         "cookiefile": "cookies.txt",
     }
@@ -150,7 +150,7 @@ def download_ig_pics(url: str, folder: str):
 
 def download_video_720(link: str, filename: str):
     youtube_dl_options = {
-        "format": "bv[height<=720][ext=mp4]+ba[ext=m4a]/b[ext=mp4][height<=720]",
+        "format": "bv[height<=720][ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4][height<=720]",
         "outtmpl": filename,
         "cookiefile": "cookies.txt",
     }
