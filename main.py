@@ -180,7 +180,7 @@ def echo_all(message):
                     util.download_video(url, filename)
             except Exception as e:
                 print(e)
-                if "There is no video in this post" in str(e) and "instagram.com" in url:
+                if "No video formats found" in str(e) and "instagram.com" in url:
                     bot.edit_message_text("*⇀‸↼ | Let's try with images...*", chat_id=message.chat.id,
                                           message_id=sent_msg.message_id, parse_mode="Markdown")
                     try:
