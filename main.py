@@ -4,6 +4,7 @@ import platform
 import time
 
 import telebot
+import yt_dlp
 from dotenv import load_dotenv
 from telebot.types import InputMediaPhoto, InlineQueryResultPhoto, InlineQueryResultVideo
 
@@ -20,6 +21,7 @@ bot = telebot.TeleBot(BOT_TOKEN)
 dbtools.prepare_db()  # Creates the DB if not present
 
 print("Bot running on " + platform.platform())
+print("Using yt-dlp: " + yt_dlp.version.__version__)
 
 if platform.system() == "Linux":
     os.system("rm *.mp4")
