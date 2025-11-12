@@ -2,6 +2,7 @@ import glob
 import os
 import platform
 import time
+import logging
 
 import telebot
 import yt_dlp
@@ -10,6 +11,9 @@ from telebot.types import InputMediaPhoto, InlineQueryResultPhoto, InlineQueryRe
 
 import dbtools
 import toolbox as util
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 load_dotenv()
 
@@ -20,8 +24,8 @@ bot = telebot.TeleBot(BOT_TOKEN)
 
 dbtools.prepare_db()  # Creates the DB if not present
 
-print("Bot running on " + platform.platform())
-print("Using yt-dlp: " + yt_dlp.version.__version__)
+logger.info("Bot running on " + platform.platform())
+logger.info("Using yt-dlp: " + yt_dlp.version.__version__)
 
 if platform.system() == "Linux":
     os.system("rm *.mp4")
@@ -91,7 +95,7 @@ def inline_handler(query):
                 else:
                     util.download_video(url, filename)
             except Exception as e:
-                print(e)
+                logger.error(e)
                 return
 
             if filename and os.path.exists(filename):
@@ -118,7 +122,7 @@ def inline_handler(query):
 
                         os.remove(filename)
                     except Exception as e:
-                        print(e)
+                        logger.error(e)
                         return
 
     if len(results) > 0:
@@ -181,7 +185,7 @@ def echo_all(message):
                 else:
                     util.download_video(url, filename)
             except Exception as e:
-                print(e)
+                logger.error(e)
                 if "no video" in str(e).lower() and "instagram.com" in url:
                     bot.edit_message_text("*⇀‸↼ | Let's try with images...*", chat_id=message.chat.id,
                                           message_id=sent_msg.message_id, parse_mode="Markdown")
@@ -191,7 +195,7 @@ def echo_all(message):
                         return
 
                     except Exception as e:
-                        print(e)
+                        logger.error(e)
                         bot.edit_message_text("*ᇂ_ᇂ | Error downloading!*", chat_id=message.chat.id,
                                               message_id=sent_msg.message_id, parse_mode="Markdown")
                         time.sleep(3)
@@ -255,7 +259,7 @@ def echo_all(message):
                         return
 
                     except Exception as e:
-                        print(e)
+                        logger.error(e)
                         bot.edit_message_text("*ᇂ_ᇂ | Error downloading!*", chat_id=message.chat.id,
                                               message_id=sent_msg.message_id, parse_mode="Markdown")
                         time.sleep(3)

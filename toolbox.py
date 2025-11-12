@@ -1,9 +1,12 @@
 import os
 import re
 import time
+import logging
 
 import instaloader
 import yt_dlp
+
+logger = logging.getLogger(__name__)
 
 SUPPORTED_WEBSITES = [
     "youtube.com",
@@ -58,11 +61,13 @@ def get_ig_video_id(url: str) -> str:
 
     return re.search(r'/p/(.{11})', url).group(1)
 
+
 def get_reddit_id(url: str) -> str:
     if "comments/" in url:
         return re.search(r'comments/(.{7})', url).group(1)
 
     return re.search(r'/s/(.{10)', url).group(1)
+
 
 def get_platform_video_id(url: str) -> str:
     if "youtube.com" in url or "youtu.be" in url:
@@ -116,7 +121,7 @@ def is_video_longer_than(url: str, time: int) -> bool:
             else:
                 return False  # Duration missing (livestreams)
         except Exception as e:
-            print(f"Error: {e}")
+            logger.error(f"Error: {e}")
             return False
 
 
