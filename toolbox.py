@@ -49,6 +49,9 @@ def get_x_status_id(url: str) -> str:
 
 
 def get_tiktok_video_id(url: str) -> str:
+    if "/video/" in url:
+        return re.search(r'/video/(.{19})', url).group(1)
+
     return re.search(r'tiktok.com/(.{9})', url).group(1)
 
 
