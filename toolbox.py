@@ -86,6 +86,20 @@ def get_platform_video_id(url: str) -> str:
     else:
         return "-1"
 
+def get_platform(url: str) -> str:
+    if "youtube.com" in url or "youtu.be" in url:
+        return "youtube"
+    elif "twitter.com" in url or "x.com" in url:
+        return "twitter"
+    elif "tiktok.com" in url:
+        return "tiktok"
+    elif "instagram.com" in url:
+        return "instagram"
+    elif "reddit.com" in url or "redd.it" in url:
+        return "reddit"
+    else:
+        return "-1"
+
 
 def get_filename(url: str, ext: str) -> str:
     if ext.startswith("."):

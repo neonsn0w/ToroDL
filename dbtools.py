@@ -9,7 +9,8 @@ def prepare_db():
                    CREATE TABLE IF NOT EXISTS videos
                    (
                        file_id     VARCHAR(255) PRIMARY KEY,
-                       platform_id VARCHAR(255) NOT NULL
+                       platform_id VARCHAR(255) NOT NULL,
+                       platform    VARCHAR(255)
                    );""")
 
 def check_if_video_is_present(platform_id: str) -> bool:
@@ -30,6 +31,14 @@ def add_video(file_id: str, platform_id: str):
     cursor = connection.cursor()
     cursor.execute(f"""
                    INSERT INTO videos VALUES ("{file_id}", "{platform_id}");""")
+
+    connection.commit()
+
+def add_video(file_id: str, platform_id: str, platform: str):
+    connection = sqlite3.connect('video_ids.db')
+    cursor = connection.cursor()
+    cursor.execute(f"""
+                   INSERT INTO videos VALUES ("{file_id}", "{platform_id}", "{platform}");""")
 
     connection.commit()
 

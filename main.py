@@ -1,8 +1,8 @@
 import glob
+import logging
 import os
 import platform
 import time
-import logging
 
 import telebot
 import yt_dlp
@@ -230,7 +230,8 @@ def echo_all(message):
 
                         bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
 
-                        dbtools.add_video(response.video.file_id, util.get_platform_video_id(url))
+                        dbtools.add_video(response.video.file_id, util.get_platform_video_id(url),
+                                          util.get_platform(url))
 
                         os.remove(filename)
                     except Exception as e:
