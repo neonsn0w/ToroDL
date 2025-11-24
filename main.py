@@ -2,7 +2,10 @@ import glob
 import logging
 import os
 import platform
+import random
+import string
 import time
+import urllib
 
 import telebot
 import yt_dlp
@@ -48,6 +51,11 @@ def echo_all(message):
 
     if "https://" in message.text:
         url = util.extract_https_url(message.text)
+
+        if util.check_if_mp4_url(url):
+            download_direct_mp4(url, message)
+            return
+
         if util.is_supported_website(url):
             if dbtools.check_if_video_is_present(util.get_platform_video_id(url)):
                 bot.send_video(
@@ -172,6 +180,57 @@ def echo_all(message):
                                           message_id=sent_msg.message_id, parse_mode="Markdown")
                     time.sleep(3)
                     bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
+
+def download_direct_mp4(url: str, message: telebot.types.Message):
+    filename = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+    filename += '.mp4'
+
+    if util.check_if_mp4_url_is_larger_than_50mb(url):
+        sent_msg = bot.reply_to(message, "O.O | Too big!")
+        time.sleep(3)
+        bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
+        return
+
+    sent_msg = bot.reply_to(message, ">.< | Downloading...")
+
+    try:
+        urllib.request.urlretrieve(url, filename)
+    except Exception as e:
+        logger.error(e)
+        bot.edit_message_text("*ᇂ_ᇂ | Error downloading!*", chat_id=message.chat.id,
+                              message_id=sent_msg.message_id, parse_mode="Markdown")
+        time.sleep(3)
+        bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
+        return
+
+    try:
+        bot.edit_message_text("=w= | Uploading...", chat_id=message.chat.id,
+                              message_id=sent_msg.message_id)
+
+        with open(filename, 'rb') as video_file:
+            response = bot.send_video(
+                chat_id=message.chat.id,
+                video=video_file,
+                supports_streaming=True,
+                caption="Here's your [video](" + url + ") >w<",
+                parse_mode="Markdown",
+                reply_to_message_id=message.message_id
+            )
+
+        bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
+
+        dbtools.add_video(response.video.file_id, util.get_platform_video_id(url),
+                          util.get_platform(url))
+
+        os.remove(filename)
+    except Exception as e:
+        logger.error(e)
+        bot.edit_message_text("*(⋟﹏⋞) | Error uploading!*", chat_id=message.chat.id,
+                              message_id=sent_msg.message_id, parse_mode="Markdown")
+        time.sleep(3)
+        bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
+
+        os.remove(filename)
 
 
 def ig_img_routine(message, url):
