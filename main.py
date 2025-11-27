@@ -219,9 +219,6 @@ def download_direct_mp4(url: str, message: telebot.types.Message):
 
         bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
 
-        dbtools.add_video(response.video.file_id, util.get_platform_video_id(url),
-                          util.get_platform(url))
-
         os.remove(filename)
     except Exception as e:
         logger.error(e)
