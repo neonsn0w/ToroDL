@@ -257,7 +257,7 @@ def ig_img_routine(message, url):
 
     jpgs = [
         f for f in os.listdir("ig_img_dl")
-        if f.startswith(util.get_ig_video_id(url)) and f.endswith(".jpg") or f.endswith(".mp4")
+        if f.startswith(util.get_ig_video_id(url)) and (f.endswith(".jpg") or f.endswith(".mp4"))
     ]
 
     # jpgs.sort()
