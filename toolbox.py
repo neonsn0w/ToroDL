@@ -3,6 +3,8 @@ import re
 import time
 import logging
 
+from typing import List, Any
+
 import instaloader
 import yt_dlp
 
@@ -24,18 +26,34 @@ def is_supported_website(msg: str) -> bool:
     return any(website in msg for website in SUPPORTED_WEBSITES)
 
 
+def get_natural_sort_key(s: str) -> List[Any]:
+    parts = re.split('(\d+)', s)
+
+    def convert_part(part):
+        return int(part) if part.isdigit() else part
+
+    return [convert_part(p) for p in parts]
+
+
+def naturally_sort_filenames(filenames: List[str]) -> List[str]:
+    return sorted(filenames, key=get_natural_sort_key)
+
+
 def extract_https_url(text: str) -> str:
     match = re.search(r'https://[^\s]+', text)
     return match.group(0) if match else None
 
+
 def cleanup_mp4_url(url: str) -> str:
     return url.split('?')[0]
+
 
 def check_if_mp4_url(url: str) -> bool:
     if cleanup_mp4_url(url).endswith(".mp4"):
         return True
 
     return False
+
 
 def check_if_mp4_url_is_larger_than_50mb(url: str) -> bool:
     import urllib.request
@@ -61,6 +79,7 @@ def check_if_mp4_url_is_larger_than_50mb(url: str) -> bool:
     except Exception as e:
         logger.error(e)
         return False
+
 
 def get_yt_video_id(url: str) -> str:
     if "youtu.be" in url:
@@ -118,6 +137,7 @@ def get_platform_video_id(url: str) -> str:
         return get_reddit_id(url)
     else:
         return "-1"
+
 
 def get_platform(url: str) -> str:
     if "youtube.com" in url or "youtu.be" in url:
@@ -190,7 +210,7 @@ def download_ig_pics(url: str, folder: str):
         dirname_pattern=folder,
         filename_pattern="{shortcode}",
         download_pictures=True,
-        download_videos=False,
+        download_videos=True,
         download_video_thumbnails=False,
         download_geotags=False,
         download_comments=False,
