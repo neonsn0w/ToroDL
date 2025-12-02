@@ -41,6 +41,25 @@ def start(message):
             bot.send_photo(message.chat.id, f, reply_to_message_id=message.message_id)
 
 
+@bot.message_handler(commands=['help'])
+def help_command(message):
+    help_text = (
+        "Commandos:\n"
+        "/start - Sends that cute image\n"
+        "/help - Shows this helpful helping help message\n"
+        "Links supported\n"
+        "Yotoube\n"
+        "Twitter\n"
+        "IGuess\n"
+    )
+
+    bot.send_message(
+        message.chat.id,
+        help_text,
+        reply_to_message_id=message.message_id
+    )
+
+
 @bot.message_handler(func=lambda msg: True)
 def echo_all(message):
     if "bigrat.monster" in message.text:
@@ -257,7 +276,7 @@ def ig_img_routine(message, url):
 
     jpgs = [
         f for f in os.listdir("ig_img_dl")
-        if f.startswith(util.get_ig_video_id(url)) and (f.endswith(".jpg") or f.endswith(".mp4"))
+        if f.startswith(util.get_ig_video_id(url)) and f.endswith(".jpg") or f.endswith(".mp4")
     ]
 
     # jpgs.sort()
