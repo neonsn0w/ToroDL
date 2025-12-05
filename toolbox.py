@@ -4,8 +4,8 @@ import time
 import logging
 
 from typing import List, Any
+from gallery_dl import config, job
 
-import instaloader
 import yt_dlp
 
 logger = logging.getLogger(__name__)
@@ -205,22 +205,13 @@ def download_video(link: str, filename: str):
         return ydl.download([link])
 
 
-def download_ig_pics(url: str, folder: str):
-    L = instaloader.Instaloader(
-        dirname_pattern=folder,
-        filename_pattern="{shortcode}",
-        download_pictures=True,
-        download_videos=True,
-        download_video_thumbnails=False,
-        download_geotags=False,
-        download_comments=False,
-        save_metadata=False,
-        compress_json=False
-    )
+def download_from_instagram(url: str):
+    config.load()  # config file is in /etc/gallery-dl.conf or %APPDATA%\gallery-dl\config.json
+    config.set(("extractor",), "cookies", "cookies.txt")
 
-    post = instaloader.Post.from_shortcode(L.context, get_ig_video_id(url))
+    j = job.DownloadJob(url)
 
-    L.download_post(post, folder)
+    j.run()
 
 
 def download_video_720(link: str, filename: str):

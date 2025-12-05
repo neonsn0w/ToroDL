@@ -6,6 +6,7 @@ import random
 import string
 import time
 import urllib
+import shutil
 
 import telebot
 import yt_dlp
@@ -154,7 +155,7 @@ def echo_all(message):
                     bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
                     return
             else:
-                ig_img_routine(message, url)
+                ig_routine(message, url)
                 bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
                 return
 
@@ -252,12 +253,12 @@ def download_direct_mp4(url: str, message: telebot.types.Message):
         os.remove(filename)
 
 
-def ig_img_routine(message, url):
-    util.download_ig_pics(url, "ig_img_dl")
+def ig_routine(message, url):
+    util.download_from_instagram(url)
 
     jpgs = [
-        f for f in os.listdir("ig_img_dl")
-        if f.startswith(util.get_ig_video_id(url)) and (f.endswith(".jpg") or f.endswith(".mp4"))
+        f for f in os.listdir("media-downloads/Instagram/" + util.get_ig_video_id(url))
+        if f.startswith(util.get_ig_video_id(url)) and (f.endswith(".webp") or f.endswith(".jpg") or f.endswith(".mp4"))
     ]
 
     # jpgs.sort()
@@ -266,12 +267,12 @@ def ig_img_routine(message, url):
     medias = []
 
     for i, f in enumerate(jpgs):
-        file_path = os.path.join("ig_img_dl", f)
+        file_path = os.path.join("media-downloads/Instagram/" + util.get_ig_video_id(url), f)
         photo_file = open(file_path, 'rb')
         file_objects.append(photo_file)
 
         if i == 0:
-            if jpgs[i].endswith('.jpg'):
+            if jpgs[i].endswith('.webp') or jpgs[i].endswith('.jpg'):
                 file_id = bot.send_photo(PRIVATE_CHANNEL_ID, photo_file).photo[-1].file_id
                 dbtools.add_photo(file_id, util.get_platform_video_id(url), util.get_platform(url))
 
@@ -289,7 +290,7 @@ def ig_img_routine(message, url):
         elif i == 10:
             bot.send_media_group(chat_id=message.chat.id, media=medias, reply_to_message_id=message.message_id)
             medias = []
-            if jpgs[i].endswith('.jpg'):
+            if jpgs[i].endswith('.webp') or jpgs[i].endswith('.jpg'):
                 file_id = bot.send_photo(PRIVATE_CHANNEL_ID, photo_file).photo[-1].file_id
                 dbtools.add_photo(file_id, util.get_platform_video_id(url), util.get_platform(url))
 
@@ -300,7 +301,7 @@ def ig_img_routine(message, url):
 
                 medias.append(InputMediaVideo(file_id))
         else:
-            if jpgs[i].endswith('.jpg'):
+            if jpgs[i].endswith('.webp') or jpgs[i].endswith('.jpg'):
                 file_id = bot.send_photo(PRIVATE_CHANNEL_ID, photo_file).photo[-1].file_id
                 dbtools.add_photo(file_id, util.get_platform_video_id(url), util.get_platform(url))
 
@@ -316,9 +317,7 @@ def ig_img_routine(message, url):
     for file_obj in file_objects:
         file_obj.close()
 
-    for filename in glob.glob("ig_img_dl/" + util.get_ig_video_id(url) + "*"):
-        os.remove(filename)
-    return
+    shutil.rmtree("media-downloads/Instagram/" + util.get_ig_video_id(url))
 
 
 bot.infinity_polling()

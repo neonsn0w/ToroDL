@@ -1,4 +1,4 @@
 yt-dlp
 python-dotenv
 pytelegrambotapi
-instaloader
+gallery-dl
