@@ -26,6 +26,33 @@ def is_supported_website(msg: str) -> bool:
     return any(website in msg for website in SUPPORTED_WEBSITES)
 
 
+def validate_url(url: str) -> bool:
+    patterns = [
+        # Instagram: Posts, Reels
+        r'instagram\.com/(?:p|reel)/',
+
+        # TikTok: Matches @user/video/ID AND @user/photo/ID
+        # Also catches short links (vm/vt)
+        r'tiktok\.com/@[^/]+/(?:video|photo)/\d+',
+        r'(?:vm|vt)\.tiktok\.com/',
+
+        # YouTube: Watch, Shorts, or shortened youtu.be links
+        r'(?:youtube\.com/(?:watch\?v=|shorts/)|youtu\.be/)',
+
+        # Reddit: Must contain /comments/ or be a redd.it shortlink
+        r'reddit\.com/r/[^/]+/comments/',
+        r'redd\.it/',
+
+        # X (Twitter): Must contain /status/
+        r'(?:twitter|x)\.com/[^/]+/status/\d+'
+    ]
+
+    for pattern in patterns:
+        if re.search(pattern, url, re.IGNORECASE):
+            return True
+    return False
+
+
 def get_natural_sort_key(s: str) -> List[Any]:
     parts = re.split('(\d+)', s)
 
@@ -103,6 +130,9 @@ def get_x_status_id(url: str) -> str:
 def get_tiktok_video_id(url: str) -> str:
     if "/video/" in url:
         return re.search(r'/video/(.{19})', url).group(1)
+
+    if "/photo/" in url:
+        return re.search(r'/photo/(.{19})', url).group(1)
 
     return re.search(r'tiktok.com/(.{9})', url).group(1)
 
@@ -205,9 +235,11 @@ def download_video(link: str, filename: str):
         return ydl.download([link])
 
 
-def download_from_instagram(url: str):
+def download_media(url: str):
     config.load()  # config file is in /etc/gallery-dl.conf or %APPDATA%\gallery-dl\config.json
     config.set(("extractor",), "cookies", "cookies.txt")
+    config.set(("extractor",), "directory", [get_platform(url), get_platform_video_id(url)])
+    config.set(("extractor",), "filename", get_platform_video_id(url) + "_{num}.{extension}")
 
     j = job.DownloadJob(url)
 

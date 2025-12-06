@@ -58,7 +58,7 @@ def echo_all(message):
             download_direct_mp4(url, message)
             return
 
-        if util.is_supported_website(url):
+        if util.validate_url(url):
             if dbtools.get_number_of_media_by_platform_id(util.get_platform_video_id(url)) == 1:
                 if dbtools.get_first_media(util.get_platform_video_id(url))[3] == "photo":
                     bot.send_photo(
@@ -134,7 +134,7 @@ def echo_all(message):
 
             sent_msg = bot.reply_to(message, ">.< | Downloading...")
 
-            if "instagram.com" not in url:
+            if "instagram.com" not in url and "tiktok.com" not in url:
                 try:
                     if "youtube.com" in url or "youtu.be" in url:
                         if util.is_video_longer_than(url, 120):
@@ -158,8 +158,10 @@ def echo_all(message):
                 ig_routine(message, url)
                 bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
                 return
+        else:
+            return
 
-        if filename and os.path.exists(filename):
+        if os.path.exists(filename) and filename:
             if util.is_file_smaller_than_50mb(filename):
                 try:
                     bot.edit_message_text("=w= | Uploading...", chat_id=message.chat.id,
@@ -254,11 +256,11 @@ def download_direct_mp4(url: str, message: telebot.types.Message):
 
 
 def ig_routine(message, url):
-    util.download_from_instagram(url)
+    util.download_media(url)
 
     jpgs = [
-        f for f in os.listdir("media-downloads/Instagram/" + util.get_ig_video_id(url))
-        if f.startswith(util.get_ig_video_id(url)) and (f.endswith(".webp") or f.endswith(".jpg") or f.endswith(".mp4"))
+        f for f in os.listdir("media-downloads/" + util.get_platform(url) + "/" + util.get_platform_video_id(url))
+        if f.startswith(util.get_platform_video_id(url)) and (f.endswith(".webp") or f.endswith(".jpg") or f.endswith(".mp4"))
     ]
 
     # jpgs.sort()
@@ -267,7 +269,7 @@ def ig_routine(message, url):
     medias = []
 
     for i, f in enumerate(jpgs):
-        file_path = os.path.join("media-downloads/Instagram/" + util.get_ig_video_id(url), f)
+        file_path = os.path.join("media-downloads/" + util.get_platform(url) + "/" + util.get_platform_video_id(url), f)
         photo_file = open(file_path, 'rb')
         file_objects.append(photo_file)
 
@@ -317,7 +319,7 @@ def ig_routine(message, url):
     for file_obj in file_objects:
         file_obj.close()
 
-    shutil.rmtree("media-downloads/Instagram/" + util.get_ig_video_id(url))
+    shutil.rmtree("media-downloads/" + util.get_platform(url) + "/" + util.get_platform_video_id(url))
 
 
 bot.infinity_polling()
