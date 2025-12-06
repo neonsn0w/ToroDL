@@ -27,19 +27,39 @@ def get_number_of_media_by_platform_id(platform_id: str) -> int:
 
 def add_video(file_id: str, platform_id: str, platform: str):
     connection = sqlite3.connect('video_ids.db')
-    cursor = connection.cursor()
-    cursor.execute(f"""
-                   INSERT INTO videos VALUES ("{file_id}", "{platform_id}", "{platform}", "video");""")
+    try:
+        cursor = connection.cursor()
+        cursor.execute(f"""
+                           INSERT INTO videos VALUES ("{file_id}", "{platform_id}", "{platform}", "video");""")
 
-    connection.commit()
+        connection.commit()
+    except Exception as e:
+        connection.close()
+        raise e
 
 def add_photo(file_id: str, platform_id: str, platform: str):
     connection = sqlite3.connect('video_ids.db')
-    cursor = connection.cursor()
-    cursor.execute(f"""
-                   INSERT INTO videos VALUES ("{file_id}", "{platform_id}", "{platform}", "photo");""")
+    try:
+        cursor = connection.cursor()
+        cursor.execute(f"""
+                       INSERT INTO videos VALUES ("{file_id}", "{platform_id}", "{platform}", "photo");""")
 
-    connection.commit()
+        connection.commit()
+    except Exception as e:
+        connection.close()
+        raise e
+
+def add_sound(file_id: str, platform_id: str, platform: str):
+    connection = sqlite3.connect('video_ids.db')
+    try:
+        cursor = connection.cursor()
+        cursor.execute(f"""
+                           INSERT INTO videos VALUES ("{file_id}", "{platform_id}", "{platform}", "sound");""")
+
+        connection.commit()
+    except Exception as e:
+        connection.close()
+        raise e
 
 def get_first_media(platform_id: str):
     connection = sqlite3.connect('video_ids.db')
@@ -48,6 +68,16 @@ def get_first_media(platform_id: str):
                    SELECT *
                    FROM videos AS v
                    WHERE v.platform_id = "{platform_id}";""")
+
+    return cursor.fetchone()
+
+def get_first_sound(platform_id: str):
+    connection = sqlite3.connect('video_ids.db')
+    cursor = connection.cursor()
+    cursor.execute(f"""
+                   SELECT *
+                   FROM videos AS v
+                   WHERE v.platform_id = "{platform_id}" AND v.media_type="sound";""")
 
     return cursor.fetchone()
 

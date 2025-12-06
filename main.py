@@ -88,7 +88,7 @@ def echo_all(message):
                             medias.append(
                                 InputMediaPhoto(row[0], caption="Here's your [media](" + url + ") >w<",
                                                 parse_mode="Markdown"))
-                        else:
+                        elif row[3] == "video":
                             medias.append(
                                 InputMediaVideo(row[0], caption="Here's your [media](" + url + ") >w<",
                                                 parse_mode="Markdown"))
@@ -101,7 +101,7 @@ def echo_all(message):
                         if row[3] == "photo":
                             medias.append(
                                 InputMediaPhoto(row[0]))
-                        else:
+                        elif row[3] == "video":
                             medias.append(
                                 InputMediaVideo(row[0]))
 
@@ -109,13 +109,16 @@ def echo_all(message):
                         if row[3] == "photo":
                             medias.append(
                                 InputMediaPhoto(row[0]))
-                        else:
+                        elif row[3] == "video":
                             medias.append(
                                 InputMediaVideo(row[0]))
 
                     i = i + 1
 
                 bot.send_media_group(chat_id=message.chat.id, media=medias, reply_to_message_id=message.message_id)
+
+                bot.send_audio(chat_id=message.chat.id, audio=dbtools.get_first_sound(util.get_platform_video_id(url))[0], reply_to_message_id=message.message_id)
+
                 return
 
             if "youtube.com" in url or "youtu.be" in url:
@@ -276,7 +279,11 @@ def ig_routine(message, url):
         if i == 0:
             if jpgs[i].endswith('.webp') or jpgs[i].endswith('.jpg'):
                 file_id = bot.send_photo(PRIVATE_CHANNEL_ID, photo_file).photo[-1].file_id
-                dbtools.add_photo(file_id, util.get_platform_video_id(url), util.get_platform(url))
+                try:
+                    dbtools.add_photo(file_id, util.get_platform_video_id(url), util.get_platform(url))
+                except Exception as e:
+                    logger.error(e)
+                    logger.warning("NOT ADDING THE IMAGE TO THE DATABASE")
 
                 medias.append(
                     InputMediaPhoto(file_id, caption="Here's your [media](" + url + ") >w<",
@@ -289,12 +296,16 @@ def ig_routine(message, url):
                     InputMediaVideo(file_id, caption="Here's your [media](" + url + ") >w<",
                                     parse_mode="Markdown"))
 
-        elif i == 10:
+        elif i % 10 == 0:
             bot.send_media_group(chat_id=message.chat.id, media=medias, reply_to_message_id=message.message_id)
             medias = []
             if jpgs[i].endswith('.webp') or jpgs[i].endswith('.jpg'):
                 file_id = bot.send_photo(PRIVATE_CHANNEL_ID, photo_file).photo[-1].file_id
-                dbtools.add_photo(file_id, util.get_platform_video_id(url), util.get_platform(url))
+                try:
+                    dbtools.add_photo(file_id, util.get_platform_video_id(url), util.get_platform(url))
+                except Exception as e:
+                    logger.error(e)
+                    logger.warning("NOT ADDING THE MEDIA TO THE DATABASE")
 
                 medias.append(InputMediaPhoto(file_id))
             else:
@@ -305,7 +316,11 @@ def ig_routine(message, url):
         else:
             if jpgs[i].endswith('.webp') or jpgs[i].endswith('.jpg'):
                 file_id = bot.send_photo(PRIVATE_CHANNEL_ID, photo_file).photo[-1].file_id
-                dbtools.add_photo(file_id, util.get_platform_video_id(url), util.get_platform(url))
+                try:
+                    dbtools.add_photo(file_id, util.get_platform_video_id(url), util.get_platform(url))
+                except Exception as e:
+                    logger.error(e)
+                    logger.warning("NOT ADDING THE MEDIA TO THE DATABASE")
 
                 medias.append(InputMediaPhoto(file_id))
             else:
@@ -318,6 +333,21 @@ def ig_routine(message, url):
 
     for file_obj in file_objects:
         file_obj.close()
+
+    for f in os.listdir("media-downloads/" + util.get_platform(url) + "/" + util.get_platform_video_id(url)):
+        if f.startswith(util.get_platform_video_id(url)) and f.endswith(".mp3"):
+            file_path = os.path.join(
+                "media-downloads/" + util.get_platform(url) + "/" + util.get_platform_video_id(url), f)
+
+            sound_file = open(file_path, 'rb')
+            file_id = bot.send_audio(PRIVATE_CHANNEL_ID, sound_file).audio.file_id
+            dbtools.add_sound(file_id, util.get_platform_video_id(url), util.get_platform(url))
+
+            bot.send_audio(chat_id=message.chat.id, reply_to_message_id=message.message_id, audio=file_id)
+
+            sound_file.close()
+
+            break
 
     shutil.rmtree("media-downloads/" + util.get_platform(url) + "/" + util.get_platform_video_id(url))
 
