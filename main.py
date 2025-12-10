@@ -1,4 +1,3 @@
-import glob
 import logging
 import os
 import platform
@@ -117,7 +116,9 @@ def echo_all(message):
 
                 bot.send_media_group(chat_id=message.chat.id, media=medias, reply_to_message_id=message.message_id)
 
-                bot.send_audio(chat_id=message.chat.id, audio=dbtools.get_first_sound(util.get_platform_video_id(url))[0], reply_to_message_id=message.message_id)
+                bot.send_audio(chat_id=message.chat.id,
+                               audio=dbtools.get_first_sound(util.get_platform_video_id(url))[0],
+                               reply_to_message_id=message.message_id)
 
                 return
 
@@ -137,7 +138,7 @@ def echo_all(message):
 
             sent_msg = bot.reply_to(message, ">.< | Downloading...")
 
-            if "instagram.com" not in url and "tiktok.com" not in url:
+            if "instagram.com" not in url and "tiktok.com" not in url and "twitter.com" not in url and "x.com" not in url:
                 try:
                     if "youtube.com" in url or "youtu.be" in url:
                         if util.is_video_longer_than(url, 120):
@@ -158,7 +159,11 @@ def echo_all(message):
                     bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
                     return
             else:
-                ig_routine(message, url)
+                try:
+                    ig_routine(message, url)
+                except Exception as e:
+                    logger.error(e)
+
                 bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
                 return
         else:
@@ -263,7 +268,8 @@ def ig_routine(message, url):
 
     jpgs = [
         f for f in os.listdir("media-downloads/" + util.get_platform(url) + "/" + util.get_platform_video_id(url))
-        if f.startswith(util.get_platform_video_id(url)) and (f.endswith(".webp") or f.endswith(".jpg") or f.endswith(".mp4"))
+        if f.startswith(util.get_platform_video_id(url)) and (
+                f.endswith(".webp") or f.endswith(".jpg") or f.endswith(".png") or f.endswith(".mp4"))
     ]
 
     # jpgs.sort()
@@ -277,7 +283,7 @@ def ig_routine(message, url):
         file_objects.append(photo_file)
 
         if i == 0:
-            if jpgs[i].endswith('.webp') or jpgs[i].endswith('.jpg'):
+            if jpgs[i].endswith('.webp') or jpgs[i].endswith('.jpg') or jpgs[i].endswith('.png'):
                 file_id = bot.send_photo(PRIVATE_CHANNEL_ID, photo_file).photo[-1].file_id
                 try:
                     dbtools.add_photo(file_id, util.get_platform_video_id(url), util.get_platform(url))
@@ -299,7 +305,7 @@ def ig_routine(message, url):
         elif i % 10 == 0:
             bot.send_media_group(chat_id=message.chat.id, media=medias, reply_to_message_id=message.message_id)
             medias = []
-            if jpgs[i].endswith('.webp') or jpgs[i].endswith('.jpg'):
+            if jpgs[i].endswith('.webp') or jpgs[i].endswith('.jpg') or jpgs[i].endswith('.png'):
                 file_id = bot.send_photo(PRIVATE_CHANNEL_ID, photo_file).photo[-1].file_id
                 try:
                     dbtools.add_photo(file_id, util.get_platform_video_id(url), util.get_platform(url))
@@ -314,7 +320,7 @@ def ig_routine(message, url):
 
                 medias.append(InputMediaVideo(file_id))
         else:
-            if jpgs[i].endswith('.webp') or jpgs[i].endswith('.jpg'):
+            if jpgs[i].endswith('.webp') or jpgs[i].endswith('.jpg') or jpgs[i].endswith('.png'):
                 file_id = bot.send_photo(PRIVATE_CHANNEL_ID, photo_file).photo[-1].file_id
                 try:
                     dbtools.add_photo(file_id, util.get_platform_video_id(url), util.get_platform(url))
