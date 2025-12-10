@@ -29,7 +29,7 @@ def is_supported_website(msg: str) -> bool:
 def validate_url(url: str) -> bool:
     patterns = [
         # Instagram: Posts, Reels
-        r'instagram\.com/(?:p|reel)/',
+        r'instagram\.com/(?:p|reel|reels)/',
 
         # TikTok: Matches @user/video/ID AND @user/photo/ID
         # Also catches short links (vm/vt)
