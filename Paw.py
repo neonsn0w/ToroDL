@@ -7,4 +7,3 @@ class Paw:
         self.platform = toolbox.get_platform(self.url)
         self.video_id = toolbox.get_platform_video_id(self.url)
 
-    

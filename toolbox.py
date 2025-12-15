@@ -148,7 +148,7 @@ def get_ig_video_id(url: str) -> str:
 
 def get_reddit_id(url: str) -> str:
     if "comments/" in url:
-        return re.search(r'comments/(.{7})', url).group(1)
+        return re.search(r'comments/(.{6})', url).group(1)
 
     return re.search(r'/s/(.{10)', url).group(1)
 
