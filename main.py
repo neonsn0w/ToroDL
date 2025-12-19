@@ -2,10 +2,10 @@ import logging
 import os
 import platform
 import random
+import shutil
 import string
 import time
 import urllib
-import shutil
 
 import telebot
 import yt_dlp
@@ -24,14 +24,36 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 PRIVATE_CHANNEL_ID = os.getenv("PRIVATE_CHANNEL_ID")
 
 bot = telebot.TeleBot(BOT_TOKEN)
+bot_id = bot.get_me().id
 
 dbtools.prepare_db()  # Creates the DB if not present
+
+
+def get_photo_file_id(file_path: str) -> str:
+    with open(file_path, "rb") as f:
+        return bot.send_photo(PRIVATE_CHANNEL_ID, f).photo[-1].file_id
+
+
+admin_tutorial_pic_file_id = get_photo_file_id("img/admin_tutorial.png")
+bigrat_file_id = get_photo_file_id("img/bigrat.jpg")
 
 logger.info("Bot running on " + platform.platform())
 logger.info("Using yt-dlp: " + yt_dlp.version.__version__)
 
 if platform.system() == "Linux":
     os.system("rm *.mp4")
+
+
+@bot.message_handler(content_types=['new_chat_members'])
+def on_bot_added(message):
+    for new_member in message.new_chat_members:
+        if new_member.id == bot_id:
+            bot.send_photo(
+                message.chat.id,
+                photo=admin_tutorial_pic_file_id,
+                caption="*Hello, I'm Toro!*\n\nThanks for adding me to your group :3\nRemember to give me admin rights so i can read the messages sent in the group and automatically download videos. No extra permissions needed, when grant admin rights you can uncheck every permission.\n\n_ToroDL never stores user messages, only telegram file-ids for downloaded media are kept in a small database to save bandwidth, api calls and deliver faster downloads. This data cannot be traced back to users._ [ToroDL is fully open-source](https://github.com/neonsn0w/ToroDL)",
+                parse_mode="Markdown"
+            )
 
 
 @bot.message_handler(commands=['start'])
@@ -44,9 +66,7 @@ def start(message):
 @bot.message_handler(func=lambda msg: True)
 def echo_all(message):
     if "bigrat.monster" in message.text:
-        if os.path.exists("img/bigrat.jpg"):
-            with open("img/bigrat.jpg", "rb") as f:
-                bot.send_photo(message.chat.id, f, reply_to_message_id=message.message_id)
+        bot.send_photo(message.chat.id, bigrat_file_id, reply_to_message_id=message.message_id)
 
         return
 
