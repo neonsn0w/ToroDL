@@ -51,7 +51,7 @@ def on_bot_added(message):
             bot.send_photo(
                 message.chat.id,
                 photo=admin_tutorial_pic_file_id,
-                caption="*Hello, I'm Toro!*\n\nThanks for adding me to your group :3\nRemember to give me admin rights so i can read the messages sent in the group and automatically download videos. No extra permissions needed, when grant admin rights you can uncheck every permission.\n\n_ToroDL never stores user messages, only telegram file-ids for downloaded media are kept in a small database to save bandwidth, api calls and deliver faster downloads. This data cannot be traced back to users._ [ToroDL is fully open-source](https://github.com/neonsn0w/ToroDL)",
+                caption="*Hello, I'm Toro!*\n\nThanks for adding me to your group :3\nRemember to give me admin rights so i can read the messages sent in the group and automatically download videos. No extra permissions needed, when you grant admin rights, you can uncheck every permission.\n\n_ToroDL never stores user messages, only telegram file-ids for downloaded media are kept in a small database to save bandwidth, api calls and deliver faster downloads. This data cannot be traced back to users._ [ToroDL is fully open-source](https://github.com/neonsn0w/ToroDL)",
                 parse_mode="Markdown"
             )
 
