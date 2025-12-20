@@ -158,7 +158,7 @@ def echo_all(message):
 
             sent_msg = bot.reply_to(message, ">.< | Downloading...")
 
-            if "instagram.com" not in url and "tiktok.com" not in url and "twitter.com" not in url and "x.com" not in url:
+            if "youtube.com" in url or "youtu.be" in url or "reddit.com" in url or "redd.it" in url:
                 try:
                     if "youtube.com" in url or "youtu.be" in url:
                         if util.is_video_longer_than(url, 120):
