@@ -110,7 +110,7 @@ def echo_all(message):
                         elif row[3] == "video":
                             medias.append(
                                 InputMediaVideo(row[0], caption="Here's your [media](" + url + ") >w<",
-                                                parse_mode="Markdown"))
+                                                parse_mode="Markdown", supports_streaming=True))
 
                     elif i == 10:
                         bot.send_media_group(chat_id=message.chat.id, media=medias,
@@ -122,7 +122,7 @@ def echo_all(message):
                                 InputMediaPhoto(row[0]))
                         elif row[3] == "video":
                             medias.append(
-                                InputMediaVideo(row[0]))
+                                InputMediaVideo(row[0], supports_streaming=True))
 
                     else:
                         if row[3] == "photo":
@@ -130,7 +130,7 @@ def echo_all(message):
                                 InputMediaPhoto(row[0]))
                         elif row[3] == "video":
                             medias.append(
-                                InputMediaVideo(row[0]))
+                                InputMediaVideo(row[0], supports_streaming=True))
 
                     i = i + 1
 
@@ -320,7 +320,7 @@ def ig_routine(message, url):
 
                 medias.append(
                     InputMediaVideo(file_id, caption="Here's your [media](" + url + ") >w<",
-                                    parse_mode="Markdown"))
+                                    parse_mode="Markdown", supports_streaming=True))
 
         elif i % 10 == 0:
             bot.send_media_group(chat_id=message.chat.id, media=medias, reply_to_message_id=message.message_id)
@@ -338,7 +338,7 @@ def ig_routine(message, url):
                 file_id = bot.send_video(PRIVATE_CHANNEL_ID, photo_file).video.file_id
                 dbtools.add_video(file_id, util.get_platform_video_id(url), util.get_platform(url))
 
-                medias.append(InputMediaVideo(file_id))
+                medias.append(InputMediaVideo(file_id, supports_streaming=True))
         else:
             if jpgs[i].endswith('.webp') or jpgs[i].endswith('.jpg') or jpgs[i].endswith('.png'):
                 file_id = bot.send_photo(PRIVATE_CHANNEL_ID, photo_file).photo[-1].file_id
@@ -353,7 +353,7 @@ def ig_routine(message, url):
                 file_id = bot.send_video(PRIVATE_CHANNEL_ID, photo_file).video.file_id
                 dbtools.add_video(file_id, util.get_platform_video_id(url), util.get_platform(url))
 
-                medias.append(InputMediaVideo(file_id))
+                medias.append(InputMediaVideo(file_id, supports_streaming=True))
 
     bot.send_media_group(chat_id=message.chat.id, media=medias, reply_to_message_id=message.message_id)
 
