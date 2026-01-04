@@ -1,8 +1,9 @@
 import os
 import re
 import logging
+from pathlib import Path
 
-from typing import List, Any
+from typing import List, Any, Union
 from gallery_dl import config, job
 
 import yt_dlp
@@ -52,16 +53,17 @@ def validate_url(url: str) -> bool:
     return False
 
 
-def get_natural_sort_key(s: str) -> List[Any]:
-    parts = re.split('(\d+)', s)
+def get_natural_sort_key(s: Union[str, Path]) -> List[Any]:
+    target = s.name if isinstance(s, Path) else s
+
+    parts = re.split(r'(\d+)', target)
 
     def convert_part(part):
         return int(part) if part.isdigit() else part
 
     return [convert_part(p) for p in parts]
 
-
-def naturally_sort_filenames(filenames: List[str]) -> List[str]:
+def naturally_sort_filenames(filenames: List[Union[str, Path]]) -> List[Union[str, Path]]:
     return sorted(filenames, key=get_natural_sort_key)
 
 

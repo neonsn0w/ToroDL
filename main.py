@@ -6,376 +6,341 @@ import shutil
 import string
 import time
 import urllib
+from pathlib import Path
 
 import telebot
 import yt_dlp
 from dotenv import load_dotenv
-from telebot.types import InputMediaPhoto, InputMediaVideo
+from telebot.types import InputMediaPhoto, InputMediaVideo, Message
 
 import dbtools
 import toolbox as util
 
+# --- Setup ---
+
 logger = logging.getLogger(__name__)
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 PRIVATE_CHANNEL_ID = os.getenv("PRIVATE_CHANNEL_ID")
+TEMP_DIR = Path("media-downloads")
+IMG_DIR = Path("img")
 
 bot = telebot.TeleBot(BOT_TOKEN)
-bot_id = bot.get_me().id
 
 dbtools.prepare_db()  # Creates the DB if not present
 
 
 def get_photo_file_id(file_path: str) -> str:
+    """Uploads a photo file to the private channel to get a Telegram File ID."""
     with open(file_path, "rb") as f:
         return bot.send_photo(PRIVATE_CHANNEL_ID, f).photo[-1].file_id
 
 
-admin_tutorial_pic_file_id = get_photo_file_id("img/admin_tutorial.png")
-bigrat_file_id = get_photo_file_id("img/bigrat.jpg")
-
-logger.info("Bot running on " + platform.platform())
-logger.info("Using yt-dlp: " + yt_dlp.version.__version__)
-
-if platform.system() == "Linux":
-    os.system("rm *.mp4")
+BIGRAT_FILE_ID = get_photo_file_id("img/bigrat.jpg")
 
 
-# @bot.message_handler(content_types=['new_chat_members'])
-# def on_bot_added(message):
-#     for new_member in message.new_chat_members:
-#         if new_member.id == bot_id:
-#             bot.send_photo(
-#                 message.chat.id,
-#                 photo=admin_tutorial_pic_file_id,
-#                 caption="*Hello, I'm Toro!*\n\nThanks for adding me to your group :3\nRemember to give me admin rights so i can read the messages sent in the group and automatically download videos. No extra permissions needed, when you grant admin rights, you can uncheck every permission.\n\n_ToroDL never stores user messages, only telegram file-ids for downloaded media are kept in a small database to save bandwidth, api calls and deliver faster downloads. This data cannot be traced back to users._ [ToroDL is fully open-source](https://github.com/neonsn0w/ToroDL)",
-#                 parse_mode="Markdown"
-#             )
+def cleanup_temp_mp4():
+    """Safely removes mp4 files in the current directory."""
+    for file in Path(".").glob("*.mp4"):
+        try:
+            file.unlink()
+        except OSError as e:
+            logger.error(f"Error deleting {file}: {e}")
 
+
+cleanup_temp_mp4()
+
+
+def chunk_list(data: list, size: int):
+    """Yield successive n-sized chunks from a list."""
+    for i in range(0, len(data), size):
+        yield data[i:i + size]
+
+
+def send_status_message(chat_id: int, text: str, reply_to: int = None) -> Message:
+    return bot.send_message(
+        chat_id, text,
+        reply_to_message_id=reply_to,
+        parse_mode="Markdown"
+    )
+
+
+def safe_delete(message: Message, delay: int = 0):
+    if delay:
+        time.sleep(delay)
+    try:
+        bot.delete_message(message.chat.id, message.message_id)
+    except Exception as e:
+        logger.debug(f"Failed to delete message: {e}")
+
+
+# --- Handlers ---
 
 @bot.message_handler(commands=['start'])
-def start(message):
-    if os.path.exists("img/huh-toro.jpg"):
-        with open("img/huh-toro.jpg", "rb") as f:
+def start(message: Message):
+    huh_toro = IMG_DIR / "huh-toro.jpg"
+    if huh_toro.exists():
+        with huh_toro.open("rb") as f:
             bot.send_photo(message.chat.id, f, reply_to_message_id=message.message_id)
 
 
 @bot.message_handler(func=lambda msg: True)
 def echo_all(message):
-    if "bigrat.monster" in message.text:
-        bot.send_photo(message.chat.id, bigrat_file_id, reply_to_message_id=message.message_id)
+    text = message.text or ""
 
+    # That absolutely huge rat
+    if "bigrat.monster" in text:
+        if BIGRAT_FILE_ID:
+            bot.send_photo(message.chat.id, BIGRAT_FILE_ID, reply_to_message_id=message.message_id)
         return
 
-    if "https://" in message.text:
-        url = util.extract_https_url(message.text)
+    if "https://" not in text:
+        return
 
-        if util.check_if_mp4_url(url):
-            download_direct_mp4(url, message)
+    url = util.extract_https_url(text)
+    if not url:
+        return
+
+    # Separate handling for direct mp4 file URLs
+    if util.check_if_mp4_url(url):
+        process_direct_mp4(message, url)
+        return
+
+    if not util.validate_url(url):
+        return
+
+    platform_id = util.get_platform_video_id(url)
+    media_count = dbtools.get_number_of_media_by_platform_id(platform_id)
+
+    if media_count > 0:
+        send_media_from_cache(message, url, platform_id, media_count)
+        return
+
+    if "youtube.com" in url or "youtu.be" in url:
+        try:
+            yt_url = util.get_yt_video_url(util.get_yt_video_id(url))
+            if util.is_video_longer_than(yt_url, 600):  # 10 mins
+                return
+        except Exception:
             return
 
-        if util.validate_url(url):
-            if dbtools.get_number_of_media_by_platform_id(util.get_platform_video_id(url)) == 1:
-                if dbtools.get_first_media(util.get_platform_video_id(url))[3] == "photo":
-                    bot.send_photo(
-                        chat_id=message.chat.id,
-                        photo=dbtools.get_first_media(util.get_platform_video_id(url))[0],
-                        caption="Here's your [media](" + url + ") >w<",
-                        parse_mode="Markdown",
-                        reply_to_message_id=message.message_id
-                    )
-                else:
-                    bot.send_video(
-                        chat_id=message.chat.id,
-                        video=dbtools.get_first_media(util.get_platform_video_id(url))[0],
-                        supports_streaming=True,
-                        caption="Here's your [media](" + url + ") >w<",
-                        parse_mode="Markdown",
-                        reply_to_message_id=message.message_id
-                    )
-                return
-            elif dbtools.get_number_of_media_by_platform_id(util.get_platform_video_id(url)) > 1:
-                i = 0  # Questo loop mi pare abbastanza orrendo
-                medias = []
+    process_new_download(message, url)
 
-                for row in dbtools.get_all_media(util.get_platform_video_id(url)):
-                    if i == 0:
-                        if row[3] == "photo":
-                            medias.append(
-                                InputMediaPhoto(row[0], caption="Here's your [media](" + url + ") >w<",
-                                                parse_mode="Markdown"))
-                        elif row[3] == "video":
-                            medias.append(
-                                InputMediaVideo(row[0], caption="Here's your [media](" + url + ") >w<",
-                                                parse_mode="Markdown", supports_streaming=True))
 
-                    elif i == 10:
-                        bot.send_media_group(chat_id=message.chat.id, media=medias,
-                                             reply_to_message_id=message.message_id)
-                        medias = []
+# --- CORE LOGIC ---
 
-                        if row[3] == "photo":
-                            medias.append(
-                                InputMediaPhoto(row[0]))
-                        elif row[3] == "video":
-                            medias.append(
-                                InputMediaVideo(row[0], supports_streaming=True))
+def process_new_download(message: Message, url: str):
+    """Orchestrates the download of content from supported platforms."""
 
-                    else:
-                        if row[3] == "photo":
-                            medias.append(
-                                InputMediaPhoto(row[0]))
-                        elif row[3] == "video":
-                            medias.append(
-                                InputMediaVideo(row[0], supports_streaming=True))
+    is_single_video_platform = any(x in url for x in ["youtube.com", "youtu.be", "reddit.com", "redd.it"])
 
-                    i = i + 1
+    status_msg = send_status_message(message.chat.id, ">.< | Downloading...", message.message_id)
 
-                bot.send_media_group(chat_id=message.chat.id, media=medias, reply_to_message_id=message.message_id)
+    if is_single_video_platform:
+        filename = util.get_filename(url, "mp4")
+        if filename == "-1":
+            safe_delete(status_msg)
+            return
 
-                bot.send_audio(chat_id=message.chat.id,
-                               audio=dbtools.get_first_sound(util.get_platform_video_id(url))[0],
-                               reply_to_message_id=message.message_id)
+        file_path = Path(filename)
 
-                return
-
-            if "youtube.com" in url or "youtu.be" in url:
-                try:
-                    url = util.get_yt_video_url(util.get_yt_video_id(url))
-
-                    if util.is_video_longer_than(url, 600):  # 10 minutes
-                        return
-                except Exception as e:
-                    return
-
-            filename = util.get_filename(url, "mp4")
-
-            if filename == "-1":
-                return
-
-            sent_msg = bot.reply_to(message, ">.< | Downloading...")
-
-            if "youtube.com" in url or "youtu.be" in url or "reddit.com" in url or "redd.it" in url:
-                try:
-                    if "youtube.com" in url or "youtu.be" in url:
-                        if util.is_video_longer_than(url, 120):
-                            util.download_video_720(url, filename)
-                        else:
-                            util.download_video(url, filename)
-                    else:
-                        util.download_video(url, filename)
-                except Exception as e:
-                    logger.error(e)
-                    if "18 years" in str(e):
-                        bot.edit_message_text("*ᇂ_ᇂ | This video is age restricted!*", chat_id=message.chat.id,
-                                              message_id=sent_msg.message_id, parse_mode="Markdown")
-                    else:
-                        bot.edit_message_text("*ᇂ_ᇂ | Error downloading!*", chat_id=message.chat.id,
-                                              message_id=sent_msg.message_id, parse_mode="Markdown")
-                    time.sleep(3)
-                    bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
-                    return
+        try:
+            # YouTube specific logic for quality
+            if "youtu" in url and util.is_video_longer_than(url, 150):
+                util.download_video_720(url, filename)
             else:
-                try:
-                    ig_routine(message, url)
-                except Exception as e:
-                    logger.error(e)
+                util.download_video(url, filename)
 
-                bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
-                return
-        else:
-            return
-
-        if os.path.exists(filename) and filename:
-            if util.is_file_smaller_than_50mb(filename):
-                try:
+            # Upload
+            if file_path.exists():
+                if util.is_file_smaller_than_50mb(str(file_path)):
                     bot.edit_message_text("=w= | Uploading...", chat_id=message.chat.id,
-                                          message_id=sent_msg.message_id)
-
-                    with open(filename, 'rb') as video_file:
-                        response = bot.send_video(
+                                          message_id=status_msg.message_id)
+                    with file_path.open('rb') as video_file:
+                        resp = bot.send_video(
                             chat_id=message.chat.id,
                             video=video_file,
                             supports_streaming=True,
-                            caption="Here's your [video](" + url + ") >w<",
+                            caption=f"Here's your [video]({url}) >w<",
                             parse_mode="Markdown",
                             reply_to_message_id=message.message_id
                         )
-
-                    bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
-
-                    dbtools.add_video(response.video.file_id, util.get_platform_video_id(url),
-                                      util.get_platform(url))
-
-                    os.remove(filename)
-                except Exception as e:
-                    bot.edit_message_text("*(⋟﹏⋞) | Error uploading!*", chat_id=message.chat.id,
-                                          message_id=sent_msg.message_id, parse_mode="Markdown")
-                    time.sleep(3)
-                    bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
-
-                    os.remove(filename)
-
+                    # Save to DB
+                    dbtools.add_video(resp.video.file_id, util.get_platform_video_id(url), util.get_platform(url))
+                    safe_delete(status_msg)
+                else:
+                    bot.edit_message_text("*O.O | Too big!*", chat_id=message.chat.id,
+                                          message_id=status_msg.message_id, parse_mode="Markdown")
+                    safe_delete(status_msg, 3)
             else:
-                bot.edit_message_text("*O.O | Too big!*", chat_id=message.chat.id, message_id=sent_msg.message_id,
-                                      parse_mode="Markdown")
-                time.sleep(3)
-                bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
+                raise FileNotFoundError("Download failed, file not found.")
 
-                os.remove(filename)
+        except Exception as e:
+            logger.error(f"Single video error: {e}")
+            bot.edit_message_text("*ᇂ_ᇂ | Error downloading!*", chat_id=message.chat.id,
+                                  message_id=status_msg.message_id,
+                                  parse_mode="Markdown")
+            safe_delete(status_msg, 3)
+        finally:
+            if file_path.exists():
+                file_path.unlink()
+    else:
+        try:
+            process_gallery_download(message, url)
+        except Exception as e:
+            logger.error(f"Gallery routine error: {e}")
+        safe_delete(status_msg)
 
+
+def send_media_from_cache(message: Message, url: str, platform_id: str, count: int):
+    """Handles sending media that already exists in the database."""
+    caption = f"Here's your [media]({url}) >w<"
+
+    if count == 1:
+        media_data = dbtools.get_first_media(platform_id)
+        file_id, _, _, media_type = media_data
+
+        if media_type == "photo":
+            bot.send_photo(message.chat.id, file_id, caption=caption,
+                           parse_mode="Markdown", reply_to_message_id=message.message_id)
         else:
-            bot.edit_message_text("*╥﹏╥ | Error downloading!*", chat_id=message.chat.id,
-                                  message_id=sent_msg.message_id, parse_mode="Markdown")
-            time.sleep(3)
-            bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
+            bot.send_video(message.chat.id, file_id, caption=caption,
+                           supports_streaming=True, parse_mode="Markdown",
+                           reply_to_message_id=message.message_id)
+    else:
+        # Multi-media handling (Albums)
+        all_media = dbtools.get_all_media(platform_id)
+        input_media_list = []
+
+        for index, row in enumerate(all_media):
+            file_id, _, _, media_type = row
+            # Only the first item gets the caption
+            current_caption = caption if index == 0 else None
+
+            if media_type == "photo":
+                input_media_list.append(InputMediaPhoto(file_id, caption=current_caption, parse_mode="Markdown"))
+            elif media_type == "video":
+                input_media_list.append(
+                    InputMediaVideo(file_id, caption=current_caption, parse_mode="Markdown", supports_streaming=True))
+
+        # Send in groups of 10, since it's the maximum that Telegram allows.
+        for chunk in chunk_list(input_media_list, 10):
+            bot.send_media_group(message.chat.id, media=chunk, reply_to_message_id=message.message_id)
+
+        # Send Audio if exists
+        audio_data = dbtools.get_first_sound(platform_id)
+        if audio_data:
+            bot.send_audio(message.chat.id, audio=audio_data[0], reply_to_message_id=message.message_id)
 
 
-def download_direct_mp4(url: str, message: telebot.types.Message):
-    filename = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-    filename += '.mp4'
+def process_direct_mp4(message: Message, url: str):
+    """Downloads and sends a direct MP4 link."""
+    filename = ''.join(random.choices(string.ascii_letters + string.digits, k=8)) + '.mp4'
+    file_path = Path(filename)
 
     if util.check_if_mp4_url_is_larger_than_50mb(url):
-        sent_msg = bot.reply_to(message, "O.O | Too big!")
-        time.sleep(3)
-        bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
+        status = send_status_message(message.chat.id, "O.O | Too big!", message.message_id)
+        safe_delete(status, 3)
         return
 
-    sent_msg = bot.reply_to(message, ">.< | Downloading...")
+    status_msg = send_status_message(message.chat.id, ">.< | Downloading...", message.message_id)
 
     try:
         urllib.request.urlretrieve(url, filename)
-    except Exception as e:
-        logger.error(e)
-        bot.edit_message_text("*ᇂ_ᇂ | Error downloading!*", chat_id=message.chat.id,
-                              message_id=sent_msg.message_id, parse_mode="Markdown")
-        time.sleep(3)
-        bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
-        return
 
-    try:
-        bot.edit_message_text("=w= | Uploading...", chat_id=message.chat.id,
-                              message_id=sent_msg.message_id)
+        bot.edit_message_text("=w= | Uploading...", chat_id=message.chat.id, message_id=status_msg.message_id)
 
-        with open(filename, 'rb') as video_file:
-            response = bot.send_video(
+        with file_path.open('rb') as video_file:
+            bot.send_video(
                 chat_id=message.chat.id,
                 video=video_file,
                 supports_streaming=True,
-                caption="Here's your [video](" + url + ") >w<",
+                caption=f"Here's your [video]({url}) >w<",
                 parse_mode="Markdown",
                 reply_to_message_id=message.message_id
             )
+        safe_delete(status_msg)
 
-        bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
-
-        os.remove(filename)
     except Exception as e:
-        logger.error(e)
-        bot.edit_message_text("*(⋟﹏⋞) | Error uploading!*", chat_id=message.chat.id,
-                              message_id=sent_msg.message_id, parse_mode="Markdown")
-        time.sleep(3)
-        bot.delete_message(sent_msg.chat.id, sent_msg.message_id)
+        logger.error(f"Direct download error: {e}")
+        bot.edit_message_text("*(⋟﹏⋞) | Error processing!*", chat_id=message.chat.id,
+                              message_id=status_msg.message_id, parse_mode="Markdown")
+        safe_delete(status_msg, 3)
+    finally:
+        if file_path.exists():
+            file_path.unlink()
 
-        os.remove(filename)
 
-
-def ig_routine(message, url):
+def process_gallery_download(message: Message, url: str):
+    """Handles URLs with multiple photos and videos, uses gallery-dl."""
     util.download_media(url)
 
-    jpgs = [
-        f for f in os.listdir("media-downloads/" + util.get_platform(url) + "/" + util.get_platform_video_id(url))
-        if f.startswith(util.get_platform_video_id(url)) and (
-                f.endswith(".webp") or f.endswith(".jpg") or f.endswith(".png") or f.endswith(".mp4"))
-    ]
+    platform = util.get_platform(url)
+    video_id = util.get_platform_video_id(url)
+    download_path = TEMP_DIR / platform / video_id
 
-    # jpgs.sort()
-    jpgs = util.naturally_sort_filenames(jpgs)
-    file_objects = []
-    medias = []
+    if not download_path.exists():
+        return
 
-    for i, f in enumerate(jpgs):
-        file_path = os.path.join("media-downloads/" + util.get_platform(url) + "/" + util.get_platform_video_id(url), f)
-        photo_file = open(file_path, 'rb')
-        file_objects.append(photo_file)
+    files = [f for f in download_path.iterdir() if f.name.startswith(video_id)]
+    files = util.naturally_sort_filenames(files)
 
-        if i == 0:
-            if jpgs[i].endswith('.webp') or jpgs[i].endswith('.jpg') or jpgs[i].endswith('.png'):
-                file_id = bot.send_photo(PRIVATE_CHANNEL_ID, photo_file).photo[-1].file_id
-                try:
-                    dbtools.add_photo(file_id, util.get_platform_video_id(url), util.get_platform(url))
-                except Exception as e:
-                    logger.error(e)
-                    logger.warning("NOT ADDING THE IMAGE TO THE DATABASE")
+    media_items = []
 
-                medias.append(
-                    InputMediaPhoto(file_id, caption="Here's your [media](" + url + ") >w<",
-                                    parse_mode="Markdown"))
+    media_files = [f for f in files if f.suffix in ['.webp', '.jpg', '.png', '.mp4']]
+
+    for f in media_files:
+        is_photo = f.suffix in ['.webp', '.jpg', '.png']
+        with f.open('rb') as file_obj:
+            if is_photo:
+                msg = bot.send_photo(PRIVATE_CHANNEL_ID, file_obj)
+                file_id = msg.photo[-1].file_id
+                dbtools.add_photo(file_id, video_id, platform)
+                media_items.append(InputMediaPhoto(file_id))
             else:
-                file_id = bot.send_video(PRIVATE_CHANNEL_ID, photo_file).video.file_id
-                dbtools.add_video(file_id, util.get_platform_video_id(url), util.get_platform(url))
+                msg = bot.send_video(PRIVATE_CHANNEL_ID, file_obj)
+                file_id = msg.video.file_id
+                dbtools.add_video(file_id, video_id, platform)
+                media_items.append(InputMediaVideo(file_id, supports_streaming=True))
 
-                medias.append(
-                    InputMediaVideo(file_id, caption="Here's your [media](" + url + ") >w<",
-                                    parse_mode="Markdown", supports_streaming=True))
+    # Add caption to first item
+    if media_items:
+        media_items[0].caption = f"Here's your [media]({url}) >w<"
+        media_items[0].parse_mode = "Markdown"
 
-        elif i % 10 == 0:
-            bot.send_media_group(chat_id=message.chat.id, media=medias, reply_to_message_id=message.message_id)
-            medias = []
-            if jpgs[i].endswith('.webp') or jpgs[i].endswith('.jpg') or jpgs[i].endswith('.png'):
-                file_id = bot.send_photo(PRIVATE_CHANNEL_ID, photo_file).photo[-1].file_id
-                try:
-                    dbtools.add_photo(file_id, util.get_platform_video_id(url), util.get_platform(url))
-                except Exception as e:
-                    logger.error(e)
-                    logger.warning("NOT ADDING THE MEDIA TO THE DATABASE")
+        # Send in groups of 10, since it's the maximum that Telegram allows.
+        for chunk in chunk_list(media_items, 10):
+            bot.send_media_group(message.chat.id, media=chunk, reply_to_message_id=message.message_id)
 
-                medias.append(InputMediaPhoto(file_id))
-            else:
-                file_id = bot.send_video(PRIVATE_CHANNEL_ID, photo_file).video.file_id
-                dbtools.add_video(file_id, util.get_platform_video_id(url), util.get_platform(url))
+    audio_files = [f for f in files if f.suffix == '.mp3']
+    if audio_files:
+        with audio_files[0].open('rb') as f:
+            msg = bot.send_audio(PRIVATE_CHANNEL_ID, f)
+            file_id = msg.audio.file_id
+            dbtools.add_sound(file_id, video_id, platform)
+            bot.send_audio(message.chat.id, file_id, reply_to_message_id=message.message_id)
 
-                medias.append(InputMediaVideo(file_id, supports_streaming=True))
-        else:
-            if jpgs[i].endswith('.webp') or jpgs[i].endswith('.jpg') or jpgs[i].endswith('.png'):
-                file_id = bot.send_photo(PRIVATE_CHANNEL_ID, photo_file).photo[-1].file_id
-                try:
-                    dbtools.add_photo(file_id, util.get_platform_video_id(url), util.get_platform(url))
-                except Exception as e:
-                    logger.error(e)
-                    logger.warning("NOT ADDING THE MEDIA TO THE DATABASE")
+    # Delete files
+    shutil.rmtree(download_path)
 
-                medias.append(InputMediaPhoto(file_id))
-            else:
-                file_id = bot.send_video(PRIVATE_CHANNEL_ID, photo_file).video.file_id
-                dbtools.add_video(file_id, util.get_platform_video_id(url), util.get_platform(url))
 
-                medias.append(InputMediaVideo(file_id, supports_streaming=True))
+# --- Entry Point ---
 
-    bot.send_media_group(chat_id=message.chat.id, media=medias, reply_to_message_id=message.message_id)
-
-    for file_obj in file_objects:
-        file_obj.close()
-
-    for f in os.listdir("media-downloads/" + util.get_platform(url) + "/" + util.get_platform_video_id(url)):
-        if f.startswith(util.get_platform_video_id(url)) and f.endswith(".mp3"):
-            file_path = os.path.join(
-                "media-downloads/" + util.get_platform(url) + "/" + util.get_platform_video_id(url), f)
-
-            sound_file = open(file_path, 'rb')
-            file_id = bot.send_audio(PRIVATE_CHANNEL_ID, sound_file).audio.file_id
-            dbtools.add_sound(file_id, util.get_platform_video_id(url), util.get_platform(url))
-
-            bot.send_audio(chat_id=message.chat.id, reply_to_message_id=message.message_id, audio=file_id)
-
-            sound_file.close()
-
-            break
-
-    shutil.rmtree("media-downloads/" + util.get_platform(url) + "/" + util.get_platform_video_id(url))
-
+if __name__ == '__main__':
+    try:
+        logger.info("Bot running on " + platform.platform())
+        logger.info("Using yt-dlp: " + yt_dlp.version.__version__)
+        logger.info("Bot started...")
+        bot.infinity_polling()
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by user.")
+    except Exception as e:
+        logger.critical(f"Critical error: {e}")
 
 bot.infinity_polling()
