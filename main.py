@@ -146,7 +146,7 @@ def echo_all(message):
                 try:
                     url = util.get_yt_video_url(util.get_yt_video_id(url))
 
-                    if util.is_video_longer_than(url, 420):  # 7 minutes
+                    if util.is_video_longer_than(url, 600):  # 10 minutes
                         return
                 except Exception as e:
                     return

@@ -209,6 +209,7 @@ def is_video_longer_than(url: str, time: int) -> bool:
         "quiet": True,  # Suppress output
         "no_warnings": True,
         "extract_flat": True,  # Faster metadata fetch
+        "cookiefile": "cookies.txt",
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
