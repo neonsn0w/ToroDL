@@ -41,8 +41,13 @@ def get_photo_file_id(file_path: str) -> str:
     with open(file_path, "rb") as f:
         return bot.send_photo(PRIVATE_CHANNEL_ID, f).photo[-1].file_id
 
+def get_document_file_id(file_path: str) -> str:
+    """Uploads a photo file to the private channel to get a Telegram File ID."""
+    with open(file_path, "rb") as f:
+        return bot.send_document(PRIVATE_CHANNEL_ID, f).document.file_id
 
 BIGRAT_FILE_ID = get_photo_file_id("img/bigrat.jpg")
+DOWNLOADING_GIF_FILE_ID = get_document_file_id("img/toro-animated-256.gif")
 
 
 def cleanup_temp_mp4():
@@ -140,7 +145,10 @@ def process_new_download(message: Message, url: str):
 
     is_single_video_platform = any(x in url for x in ["youtube.com", "youtu.be", "reddit.com", "redd.it"])
 
-    status_msg = send_status_message(message.chat.id, ">.< | Downloading...", message.message_id)
+    status_msg = bot.send_document(chat_id=message.chat.id,
+                                   caption=">.< | Downloading...",
+                                   reply_to_message_id=message.message_id,
+                                   document=DOWNLOADING_GIF_FILE_ID)
 
     if is_single_video_platform:
         filename = util.get_filename(url, "mp4")
@@ -151,17 +159,18 @@ def process_new_download(message: Message, url: str):
         file_path = Path(filename)
 
         try:
-            # YouTube specific logic for quality
-            if "youtu" in url and util.is_video_longer_than(url, 150):
-                util.download_video_720(url, filename)
+            # YouTube specific logic to avoid issues with additional data in the url (like playlist info)
+            if "youtu" in url:
+                if util.is_video_longer_than(url, 150):
+                    util.download_video_720(util.get_yt_video_url(util.get_yt_video_id(url)), filename)
+                else:
+                    util.download_video(util.get_yt_video_url(util.get_yt_video_id(url)), filename)
             else:
                 util.download_video(url, filename)
 
             # Upload
             if file_path.exists():
                 if util.is_file_smaller_than_50mb(str(file_path)):
-                    bot.edit_message_text("=w= | Uploading...", chat_id=message.chat.id,
-                                          message_id=status_msg.message_id)
                     with file_path.open('rb') as video_file:
                         resp = bot.send_video(
                             chat_id=message.chat.id,
