@@ -51,6 +51,7 @@ def get_document_file_id(file_path: str) -> str:
 
 BIGRAT_FILE_ID = get_photo_file_id("img/bigrat.jpg")
 DOWNLOADING_GIF_FILE_ID = get_document_file_id("img/toro-animated-256.gif")
+SAD_TORO_FILE_ID = get_photo_file_id("img/toro-sad-256.png")
 
 
 def cleanup_temp_mp4():
@@ -198,18 +199,29 @@ def process_new_download(message: Message, url: str):
                     dbtools.add_video(resp.video.file_id, util.get_platform_video_id(url), util.get_platform(url))
                     safe_delete(status_msg)
                 else:
-                    bot.edit_message_text("*O.O | Too big!*", chat_id=message.chat.id,
-                                          message_id=status_msg.message_id, parse_mode="Markdown")
-                    safe_delete(status_msg, 3)
+                    safe_delete(status_msg)
+
+                    error_msg = bot.send_photo(chat_id=message.chat.id,
+                                               caption="*O.O | Too big!*",
+                                               reply_to_message_id=message.message_id,
+                                               parse_mode="Markdown",
+                                               photo=SAD_TORO_FILE_ID)
+
+                    safe_delete(error_msg, 3)
             else:
                 raise FileNotFoundError("Download failed, file not found.")
 
         except Exception as e:
             logger.error(f"Single video error: {e}")
-            bot.edit_message_text("*ᇂ_ᇂ | Error downloading!*", chat_id=message.chat.id,
-                                  message_id=status_msg.message_id,
-                                  parse_mode="Markdown")
-            safe_delete(status_msg, 3)
+            safe_delete(status_msg)
+            error_msg = bot.send_photo(chat_id=message.chat.id,
+                                       caption="*ᇂ_ᇂ | Error downloading!*",
+                                       reply_to_message_id=message.message_id,
+                                       parse_mode="Markdown",
+                                       photo=SAD_TORO_FILE_ID)
+
+            safe_delete(error_msg, 3)
+
         finally:
             if file_path.exists():
                 file_path.unlink()
@@ -268,8 +280,13 @@ def process_direct_mp4(message: Message, url: str):
     file_path = Path(filename)
 
     if util.check_if_mp4_url_is_larger_than_50mb(url):
-        status = send_status_message(message.chat.id, "O.O | Too big!", message.message_id)
-        safe_delete(status, 3)
+        error_msg = bot.send_photo(chat_id=message.chat.id,
+                                   caption="*O.O | Too big!*",
+                                   reply_to_message_id=message.message_id,
+                                   parse_mode="Markdown",
+                                   photo=SAD_TORO_FILE_ID)
+
+        safe_delete(error_msg, 3)
         return
 
     status_msg = send_status_message(message.chat.id, ">.< | Downloading...", message.message_id)
@@ -294,7 +311,14 @@ def process_direct_mp4(message: Message, url: str):
         logger.error(f"Direct download error: {e}")
         bot.edit_message_text("*(⋟﹏⋞) | Error processing!*", chat_id=message.chat.id,
                               message_id=status_msg.message_id, parse_mode="Markdown")
-        safe_delete(status_msg, 3)
+        safe_delete(status_msg)
+        error_msg = bot.send_photo(chat_id=message.chat.id,
+                                   caption="*(⋟﹏⋞) | Error processing!*",
+                                   reply_to_message_id=message.message_id,
+                                   parse_mode="Markdown",
+                                   photo=SAD_TORO_FILE_ID)
+
+        safe_delete(error_msg, 3)
     finally:
         if file_path.exists():
             file_path.unlink()
