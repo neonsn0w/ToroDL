@@ -6,6 +6,7 @@ import shutil
 import string
 import time
 import urllib
+import urllib.request
 from pathlib import Path
 
 import telebot
@@ -41,10 +42,12 @@ def get_photo_file_id(file_path: str) -> str:
     with open(file_path, "rb") as f:
         return bot.send_photo(PRIVATE_CHANNEL_ID, f).photo[-1].file_id
 
+
 def get_document_file_id(file_path: str) -> str:
     """Uploads a photo file to the private channel to get a Telegram File ID."""
     with open(file_path, "rb") as f:
         return bot.send_document(PRIVATE_CHANNEL_ID, f).document.file_id
+
 
 BIGRAT_FILE_ID = get_photo_file_id("img/bigrat.jpg")
 DOWNLOADING_GIF_FILE_ID = get_document_file_id("img/toro-animated-256.gif")
@@ -93,6 +96,17 @@ def start(message: Message):
     if huh_toro.exists():
         with huh_toro.open("rb") as f:
             bot.send_photo(message.chat.id, f, reply_to_message_id=message.message_id)
+
+
+@bot.message_handler(commands=['cat'])
+def send_random_cat_pic(message: Message):
+    "Sends a random cat picture using cataas.com"
+
+    urllib.request.urlretrieve("https://cataas.com/cat", "catpic.cat")
+    with open("catpic.cat", "rb") as f:
+        bot.send_photo(message.chat.id, f, reply_to_message_id=message.message_id)
+
+    os.remove("catpic.cat")
 
 
 @bot.message_handler(func=lambda msg: True)
