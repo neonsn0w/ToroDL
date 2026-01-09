@@ -58,6 +58,7 @@ def cleanup_temp_mp4():
     """Safely removes mp4 files in the current directory."""
     for file in Path(".").glob("*.mp4"):
         try:
+            logger.debug(f"Deleting mp4 file: {file}")
             file.unlink()
         except OSError as e:
             logger.error(f"Error deleting {file}: {e}")

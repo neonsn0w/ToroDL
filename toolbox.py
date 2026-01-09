@@ -125,7 +125,7 @@ def get_yt_video_url(video_id: str) -> str:
 
 
 def get_x_status_id(url: str) -> str:
-    return re.search(r'status/(.{18})', url).group(1)
+    return re.search(r'/(?:twitter|x)\.com\/[^\/]+\/status\/(\d+)', url).group(1)
 
 
 def get_tiktok_video_id(url: str) -> str:
