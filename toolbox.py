@@ -232,7 +232,6 @@ def download_video(link: str, filename: str):
         "format": "bv[ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4]",
         "outtmpl": filename,
         "cookiefile": "cookies.txt",
-        "js-runtimes" : "deno:" + os.getenv("DENO_PATH"), # TODO: Please implement this better...
     }
     with yt_dlp.YoutubeDL(youtube_dl_options) as ydl:
         return ydl.download([link])
@@ -254,7 +253,6 @@ def download_video_720(link: str, filename: str):
         "format": "bv[height<=720][ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4][height<=720]",
         "outtmpl": filename,
         "cookiefile": "cookies.txt",
-        "js-runtimes": "deno:" + os.getenv("DENO_PATH"), # TODO: please implement this better...
     }
     with yt_dlp.YoutubeDL(youtube_dl_options) as ydl:
         return ydl.download([link])
