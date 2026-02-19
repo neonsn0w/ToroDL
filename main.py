@@ -29,6 +29,7 @@ load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 PRIVATE_CHANNEL_ID = os.getenv("PRIVATE_CHANNEL_ID")
+ADMIN_USER_ID = os.getenv("ADMIN_USER_ID")
 TEMP_DIR = Path("media-downloads")
 IMG_DIR = Path("img")
 
@@ -89,6 +90,9 @@ def safe_delete(message: Message, delay: int = 0):
     except Exception as e:
         logger.debug(f"Failed to delete message: {e}")
 
+
+def send_message_to_admin(message_contents):
+    bot.send_message(ADMIN_USER_ID, message_contents)
 
 # --- Handlers ---
 
@@ -222,6 +226,7 @@ def process_new_download(message: Message, url: str):
                                        photo=SAD_TORO_FILE_ID)
 
             safe_delete(error_msg, 3)
+            send_message_to_admin("i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
 
         finally:
             if file_path.exists():
@@ -231,6 +236,8 @@ def process_new_download(message: Message, url: str):
             process_gallery_download(message, url)
         except Exception as e:
             logger.error(f"Gallery routine error: {e}")
+            send_message_to_admin("i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
+
         safe_delete(status_msg)
 
 
@@ -320,6 +327,7 @@ def process_direct_mp4(message: Message, url: str):
                                    photo=SAD_TORO_FILE_ID)
 
         safe_delete(error_msg, 3)
+        send_message_to_admin("i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
     finally:
         if file_path.exists():
             file_path.unlink()
@@ -334,6 +342,7 @@ def process_gallery_download(message: Message, url: str):
     download_path = TEMP_DIR / platform / video_id
 
     if not download_path.exists():
+        send_message_to_admin("i messed up\n\nURL: " + url)
         return
 
     files = [f for f in download_path.iterdir() if f.name.startswith(video_id)]
@@ -385,6 +394,7 @@ if __name__ == '__main__':
         logger.info("Bot running on " + platform.platform())
         logger.info("Using yt-dlp: " + yt_dlp.version.__version__)
         logger.info("Bot started...")
+        send_message_to_admin("I'm alive!")
         bot.infinity_polling()
     except KeyboardInterrupt:
         logger.info("Bot stopped by user.")
