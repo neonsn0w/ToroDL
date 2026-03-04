@@ -114,6 +114,38 @@ def send_random_cat_pic(message: Message):
 
     os.remove("catpic.cat")
 
+@bot.message_handler(commands=['httpcat'])
+def send_httpcat_pic(message: Message):
+    notfound = False
+
+    # We get the argument
+    code = message.text.split()[1:][0]
+
+    # Is the "status code" even a code or just a random string?
+    try:
+        temp = int(code)
+    except ValueError:
+        return
+
+    # Is this thing possibly a 3-digit HTTP status code?
+    if (len(code) != 3):
+        return
+
+    url = "https://http.cat/" + code
+    try:
+        urllib.request.urlretrieve(url, "httpcat.tmp")
+    except urllib.error.HTTPError:
+        urllib.request.urlretrieve("https://http.cat/404", "httpcat.tmp")
+        notfound = True
+
+    if(not notfound):
+        with open("httpcat.tmp", "rb") as f:
+            bot.send_photo(message.chat.id, f, reply_to_message_id=message.message_id)
+    else:
+        with open("httpcat.tmp", "rb") as f:
+            bot.send_photo(message.chat.id, f, reply_to_message_id=message.message_id, caption="Unknown HTTP error code...")
+
+    os.remove("httpcat.tmp")
 
 @bot.message_handler(func=lambda msg: True)
 def echo_all(message):
