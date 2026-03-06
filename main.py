@@ -155,7 +155,7 @@ def echo_all(message):
     text = message.text or ""
 
     # That absolutely huge rat
-    if "bigrat.monster" in text:
+    if "bigrat.monster" in text.lower():
         if BIGRAT_FILE_ID:
             bot.send_photo(message.chat.id, BIGRAT_FILE_ID, reply_to_message_id=message.message_id)
         return
