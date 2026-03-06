@@ -119,7 +119,10 @@ def send_httpcat_pic(message: Message):
     notfound = False
 
     # We get the argument
-    code = message.text.split()[1:][0]
+    try:
+        code = message.text.split()[1:][0]
+    except IndexError:
+        return
 
     # Is the "status code" even a code or just a random string?
     try:
