@@ -221,10 +221,10 @@ def is_video_longer_than(url: str, time: int) -> bool:
             if duration:
                 return duration > time
             else:
-                return False  # Duration missing (livestreams)
+                return True  # Duration missing (livestreams)
         except Exception as e:
             logger.error(f"Error: {e}")
-            return False
+            return True
 
 
 def download_video(link: str, filename: str):
