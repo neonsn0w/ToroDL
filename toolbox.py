@@ -63,6 +63,7 @@ def get_natural_sort_key(s: Union[str, Path]) -> List[Any]:
 
     return [convert_part(p) for p in parts]
 
+
 def naturally_sort_filenames(filenames: List[Union[str, Path]]) -> List[Union[str, Path]]:
     return sorted(filenames, key=get_natural_sort_key)
 
@@ -260,3 +261,11 @@ def download_video_720(link: str, filename: str):
 
 def is_file_smaller_than_50mb(file_path: str) -> bool:
     return os.path.getsize(file_path) < 50 * 1024 * 1024
+
+
+def is_arr_smaller_than_50mb(files) -> bool:
+    for f in files:
+        if not is_file_smaller_than_50mb(f):
+            return False
+
+    return True

@@ -16,6 +16,7 @@ from telebot.types import InputMediaPhoto, InputMediaVideo, Message
 
 import dbtools
 import toolbox as util
+import exceptions
 
 # --- Setup ---
 
@@ -269,6 +270,15 @@ def process_new_download(message: Message, url: str):
     else:
         try:
             process_gallery_download(message, url)
+        except exceptions.FileTooBigException:
+            safe_delete(status_msg)
+            error_msg = bot.send_photo(chat_id=message.chat.id,
+                                       caption="*O.O | Too big!*",
+                                       reply_to_message_id=message.message_id,
+                                       parse_mode="Markdown",
+                                       photo=SAD_TORO_FILE_ID)
+
+            safe_delete(error_msg, 3)
         except Exception as e:
             logger.error(f"Gallery routine error: {e}")
             send_message_to_admin("i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
@@ -382,6 +392,11 @@ def process_gallery_download(message: Message, url: str):
 
     files = [f for f in download_path.iterdir() if f.name.startswith(video_id)]
     files = util.naturally_sort_filenames(files)
+
+    if (not util.is_arr_smaller_than_50mb(files)):
+        logger.warning(f"Files are bigger than 50mb")
+        shutil.rmtree(download_path)
+        raise exceptions.FileTooBigException()
 
     media_items = []
 
