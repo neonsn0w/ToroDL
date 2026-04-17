@@ -17,6 +17,7 @@ from telebot.types import InputMediaPhoto, InputMediaVideo, Message
 import dbtools
 import toolbox as util
 import exceptions
+import botTools
 
 # --- Setup ---
 
@@ -38,22 +39,9 @@ bot = telebot.TeleBot(BOT_TOKEN)
 
 dbtools.prepare_db()  # Creates the DB if not present
 
-
-def get_photo_file_id(file_path: str) -> str:
-    """Uploads a photo file to the private channel to get a Telegram File ID."""
-    with open(file_path, "rb") as f:
-        return bot.send_photo(PRIVATE_CHANNEL_ID, f).photo[-1].file_id
-
-
-def get_document_file_id(file_path: str) -> str:
-    """Uploads a photo file to the private channel to get a Telegram File ID."""
-    with open(file_path, "rb") as f:
-        return bot.send_document(PRIVATE_CHANNEL_ID, f).document.file_id
-
-
-BIGRAT_FILE_ID = get_photo_file_id("img/bigrat.jpg")
-DOWNLOADING_GIF_FILE_ID = get_document_file_id("img/toro-animated-256.gif")
-SAD_TORO_FILE_ID = get_photo_file_id("img/toro-sad-256.png")
+BIGRAT_FILE_ID = botTools.get_photo_file_id(bot, "img/bigrat.jpg", PRIVATE_CHANNEL_ID)
+DOWNLOADING_GIF_FILE_ID = botTools.get_document_file_id(bot, "img/toro-animated-256.gif", PRIVATE_CHANNEL_ID)
+SAD_TORO_FILE_ID = botTools.get_photo_file_id(bot, "img/toro-sad-256.png", PRIVATE_CHANNEL_ID)
 
 
 def cleanup_temp_mp4():
@@ -95,6 +83,7 @@ def safe_delete(message: Message, delay: int = 0):
 def send_message_to_admin(message_contents):
     bot.send_message(ADMIN_USER_ID, message_contents)
 
+
 # --- Handlers ---
 
 @bot.message_handler(commands=['start'])
@@ -114,6 +103,7 @@ def send_random_cat_pic(message: Message):
         bot.send_photo(message.chat.id, f, reply_to_message_id=message.message_id)
 
     os.remove("catpic.cat")
+
 
 @bot.message_handler(commands=['httpcat'])
 def send_httpcat_pic(message: Message):
@@ -142,14 +132,16 @@ def send_httpcat_pic(message: Message):
         urllib.request.urlretrieve("https://http.cat/404", "httpcat.tmp")
         notfound = True
 
-    if(not notfound):
+    if (not notfound):
         with open("httpcat.tmp", "rb") as f:
             bot.send_photo(message.chat.id, f, reply_to_message_id=message.message_id)
     else:
         with open("httpcat.tmp", "rb") as f:
-            bot.send_photo(message.chat.id, f, reply_to_message_id=message.message_id, caption="Unknown HTTP error code...")
+            bot.send_photo(message.chat.id, f, reply_to_message_id=message.message_id,
+                           caption="Unknown HTTP error code...")
 
     os.remove("httpcat.tmp")
+
 
 @bot.message_handler(func=lambda msg: True)
 def echo_all(message):
