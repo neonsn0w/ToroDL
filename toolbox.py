@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+import shutil
 from pathlib import Path
 
 from typing import List, Any, Union
@@ -21,6 +22,13 @@ SUPPORTED_WEBSITES = [
     "redd.it"
 ]
 
+
+def cleanup():
+    if os.path.exists("media-downloads"):
+        shutil.rmtree("media-downloads")
+
+    if os.path.exists("yt-dlp-downloads"):
+        shutil.rmtree("yt-dlp-downloads")
 
 def is_supported_website(msg: str) -> bool:
     return any(website in msg for website in SUPPORTED_WEBSITES)
@@ -231,12 +239,21 @@ def is_video_longer_than(url: str, time: int) -> bool:
 def download_video(link: str, filename: str):
     youtube_dl_options = {
         "format": "bv[ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4]",
-        "outtmpl": filename,
+        "outtmpl": f"yt-dlp-downloads/{filename}",
         "cookiefile": "cookies.txt",
     }
     with yt_dlp.YoutubeDL(youtube_dl_options) as ydl:
         return ydl.download([link])
 
+
+def download_video_720(link: str, filename: str):
+    youtube_dl_options = {
+        "format": "bv[height<=720][ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4][height<=720]",
+        "outtmpl": f"yt-dlp-downloads/{filename}",
+        "cookiefile": "cookies.txt",
+    }
+    with yt_dlp.YoutubeDL(youtube_dl_options) as ydl:
+        return ydl.download([link])
 
 def download_media(url: str):
     config.load()  # config file is in /etc/gallery-dl.conf or %APPDATA%\gallery-dl\config.json
@@ -247,16 +264,6 @@ def download_media(url: str):
     j = job.DownloadJob(url)
 
     j.run()
-
-
-def download_video_720(link: str, filename: str):
-    youtube_dl_options = {
-        "format": "bv[height<=720][ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4][height<=720]",
-        "outtmpl": filename,
-        "cookiefile": "cookies.txt",
-    }
-    with yt_dlp.YoutubeDL(youtube_dl_options) as ydl:
-        return ydl.download([link])
 
 
 def is_file_smaller_than_50mb(file_path: str) -> bool:

@@ -29,6 +29,8 @@ logging.basicConfig(
 
 load_dotenv()
 
+util.cleanup()
+
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 PRIVATE_CHANNEL_ID = os.getenv("PRIVATE_CHANNEL_ID")
 ADMIN_USER_ID = os.getenv("ADMIN_USER_ID")
@@ -44,31 +46,10 @@ DOWNLOADING_GIF_FILE_ID = botTools.get_document_file_id(bot, "img/toro-animated-
 SAD_TORO_FILE_ID = botTools.get_photo_file_id(bot, "img/toro-sad-256.png", PRIVATE_CHANNEL_ID)
 
 
-def cleanup_temp_mp4():
-    """Safely removes mp4 files in the current directory."""
-    for file in Path(".").glob("*.mp4"):
-        try:
-            logger.debug(f"Deleting mp4 file: {file}")
-            file.unlink()
-        except OSError as e:
-            logger.error(f"Error deleting {file}: {e}")
-
-
-cleanup_temp_mp4()
-
-
 def chunk_list(data: list, size: int):
     """Yield successive n-sized chunks from a list."""
     for i in range(0, len(data), size):
         yield data[i:i + size]
-
-
-def send_status_message(chat_id: int, text: str, reply_to: int = None) -> Message:
-    return bot.send_message(
-        chat_id, text,
-        reply_to_message_id=reply_to,
-        parse_mode="Markdown"
-    )
 
 
 def safe_delete(message: Message, delay: int = 0):
@@ -109,7 +90,6 @@ def send_random_cat_pic(message: Message):
 def send_httpcat_pic(message: Message):
     notfound = False
 
-    # We get the argument
     try:
         code = message.text.split()[1:][0]
     except IndexError:
@@ -192,11 +172,7 @@ def process_new_download(message: Message, url: str):
     """Orchestrates the download of content from supported platforms."""
 
     is_single_video_platform = any(x in url for x in ["youtube.com", "youtu.be", "reddit.com", "redd.it"])
-
-    status_msg = bot.send_document(chat_id=message.chat.id,
-                                   caption=">.< | Downloading...",
-                                   reply_to_message_id=message.message_id,
-                                   document=DOWNLOADING_GIF_FILE_ID)
+    status_msg = botTools.send_status_msg(bot, message, DOWNLOADING_GIF_FILE_ID)
 
     if is_single_video_platform:
         filename = util.get_filename(url, "mp4")
@@ -204,7 +180,7 @@ def process_new_download(message: Message, url: str):
             safe_delete(status_msg)
             return
 
-        file_path = Path(filename)
+        file_path = Path("yt-dlp-downloads/" + filename)
 
         try:
             # YouTube specific logic to avoid issues with additional data in the url (like playlist info)
@@ -233,13 +209,7 @@ def process_new_download(message: Message, url: str):
                     safe_delete(status_msg)
                 else:
                     safe_delete(status_msg)
-
-                    error_msg = bot.send_photo(chat_id=message.chat.id,
-                                               caption="*O.O | Too big!*",
-                                               reply_to_message_id=message.message_id,
-                                               parse_mode="Markdown",
-                                               photo=SAD_TORO_FILE_ID)
-
+                    error_msg = botTools.send_too_big_msg(bot, message, SAD_TORO_FILE_ID)
                     safe_delete(error_msg, 3)
             else:
                 raise FileNotFoundError("Download failed, file not found.")
@@ -247,11 +217,7 @@ def process_new_download(message: Message, url: str):
         except Exception as e:
             logger.error(f"Single video error: {e}")
             safe_delete(status_msg)
-            error_msg = bot.send_photo(chat_id=message.chat.id,
-                                       caption="*ᇂ_ᇂ | Error downloading!*",
-                                       reply_to_message_id=message.message_id,
-                                       parse_mode="Markdown",
-                                       photo=SAD_TORO_FILE_ID)
+            error_msg = botTools.send_error_msg(bot, message, SAD_TORO_FILE_ID)
 
             safe_delete(error_msg, 3)
             send_message_to_admin("i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
@@ -264,12 +230,7 @@ def process_new_download(message: Message, url: str):
             process_gallery_download(message, url)
         except exceptions.FileTooBigException:
             safe_delete(status_msg)
-            error_msg = bot.send_photo(chat_id=message.chat.id,
-                                       caption="*O.O | Too big!*",
-                                       reply_to_message_id=message.message_id,
-                                       parse_mode="Markdown",
-                                       photo=SAD_TORO_FILE_ID)
-
+            error_msg = botTools.send_too_big_msg(bot, message, SAD_TORO_FILE_ID)
             safe_delete(error_msg, 3)
         except Exception as e:
             logger.error(f"Gallery routine error: {e}")
@@ -325,16 +286,13 @@ def process_direct_mp4(message: Message, url: str):
     file_path = Path(filename)
 
     if util.check_if_mp4_url_is_larger_than_50mb(url):
-        error_msg = bot.send_photo(chat_id=message.chat.id,
-                                   caption="*O.O | Too big!*",
-                                   reply_to_message_id=message.message_id,
-                                   parse_mode="Markdown",
-                                   photo=SAD_TORO_FILE_ID)
+        error_msg = botTools.send_too_big_msg(bot, message, SAD_TORO_FILE_ID)
 
         safe_delete(error_msg, 3)
         return
 
-    status_msg = send_status_message(message.chat.id, ">.< | Downloading...", message.message_id)
+
+    status_msg = botTools.send_status_msg(bot, message, DOWNLOADING_GIF_FILE_ID)
 
     try:
         urllib.request.urlretrieve(url, filename)
@@ -354,15 +312,8 @@ def process_direct_mp4(message: Message, url: str):
 
     except Exception as e:
         logger.error(f"Direct download error: {e}")
-        bot.edit_message_text("*(⋟﹏⋞) | Error processing!*", chat_id=message.chat.id,
-                              message_id=status_msg.message_id, parse_mode="Markdown")
         safe_delete(status_msg)
-        error_msg = bot.send_photo(chat_id=message.chat.id,
-                                   caption="*(⋟﹏⋞) | Error processing!*",
-                                   reply_to_message_id=message.message_id,
-                                   parse_mode="Markdown",
-                                   photo=SAD_TORO_FILE_ID)
-
+        error_msg = botTools.send_error_msg(bot, message, SAD_TORO_FILE_ID)
         safe_delete(error_msg, 3)
         send_message_to_admin("i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
     finally:
