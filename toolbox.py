@@ -24,6 +24,7 @@ SUPPORTED_WEBSITES = [
 
 
 def cleanup():
+    """Removes files left from the last time that the bot was executed."""
     if os.path.exists("media-downloads"):
         shutil.rmtree("media-downloads")
 
@@ -276,3 +277,9 @@ def is_arr_smaller_than_50mb(files) -> bool:
             return False
 
     return True
+
+
+def chunk_list(data: list, size: int):
+    """Yield successive n-sized chunks from a list."""
+    for i in range(0, len(data), size):
+        yield data[i:i + size]

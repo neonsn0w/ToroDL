@@ -4,7 +4,6 @@ import platform
 import random
 import shutil
 import string
-import time
 import urllib
 import urllib.request
 from pathlib import Path
@@ -14,10 +13,10 @@ import yt_dlp
 from dotenv import load_dotenv
 from telebot.types import InputMediaPhoto, InputMediaVideo, Message
 
-import dbtools
-import toolbox as util
-import exceptions
 import botTools
+import dbtools
+import exceptions
+import toolbox as util
 
 # --- Setup ---
 
@@ -46,25 +45,6 @@ DOWNLOADING_GIF_FILE_ID = botTools.get_document_file_id(bot, "img/toro-animated-
 SAD_TORO_FILE_ID = botTools.get_photo_file_id(bot, "img/toro-sad-256.png", PRIVATE_CHANNEL_ID)
 
 
-def chunk_list(data: list, size: int):
-    """Yield successive n-sized chunks from a list."""
-    for i in range(0, len(data), size):
-        yield data[i:i + size]
-
-
-def safe_delete(message: Message, delay: int = 0):
-    if delay:
-        time.sleep(delay)
-    try:
-        bot.delete_message(message.chat.id, message.message_id)
-    except Exception as e:
-        logger.debug(f"Failed to delete message: {e}")
-
-
-def send_message_to_admin(message_contents):
-    bot.send_message(ADMIN_USER_ID, message_contents)
-
-
 # --- Handlers ---
 
 @bot.message_handler(commands=['start'])
@@ -77,7 +57,7 @@ def start(message: Message):
 
 @bot.message_handler(commands=['cat'])
 def send_random_cat_pic(message: Message):
-    "Sends a random cat picture using cataas.com"
+    """Sends a random cat picture using cataas.com"""
 
     urllib.request.urlretrieve("https://cataas.com/cat", "catpic.cat")
     with open("catpic.cat", "rb") as f:
@@ -95,14 +75,10 @@ def send_httpcat_pic(message: Message):
     except IndexError:
         return
 
-    # Is the "status code" even a code or just a random string?
-    try:
-        temp = int(code)
-    except ValueError:
+    if not code.isdigit():
         return
 
-    # Is this thing possibly a 3-digit HTTP status code?
-    if (len(code) != 3):
+    if len(code) != 3:
         return
 
     url = "https://http.cat/" + code
@@ -112,7 +88,7 @@ def send_httpcat_pic(message: Message):
         urllib.request.urlretrieve("https://http.cat/404", "httpcat.tmp")
         notfound = True
 
-    if (not notfound):
+    if not notfound:
         with open("httpcat.tmp", "rb") as f:
             bot.send_photo(message.chat.id, f, reply_to_message_id=message.message_id)
     else:
@@ -177,7 +153,7 @@ def process_new_download(message: Message, url: str):
     if is_single_video_platform:
         filename = util.get_filename(url, "mp4")
         if filename == "-1":
-            safe_delete(status_msg)
+            botTools.safe_delete(bot, status_msg)
             return
 
         file_path = Path("yt-dlp-downloads/" + filename)
@@ -206,21 +182,21 @@ def process_new_download(message: Message, url: str):
                         )
                     # Save to DB
                     dbtools.add_video(resp.video.file_id, util.get_platform_video_id(url), util.get_platform(url))
-                    safe_delete(status_msg)
+                    botTools.safe_delete(bot, status_msg)
                 else:
-                    safe_delete(status_msg)
+                    botTools.safe_delete(bot, status_msg)
                     error_msg = botTools.send_too_big_msg(bot, message, SAD_TORO_FILE_ID)
-                    safe_delete(error_msg, 3)
+                    botTools.safe_delete(bot, error_msg, 3)
             else:
                 raise FileNotFoundError("Download failed, file not found.")
 
         except Exception as e:
             logger.error(f"Single video error: {e}")
-            safe_delete(status_msg)
+            botTools.safe_delete(bot, status_msg)
             error_msg = botTools.send_error_msg(bot, message, SAD_TORO_FILE_ID)
 
-            safe_delete(error_msg, 3)
-            send_message_to_admin("i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
+            botTools.safe_delete(bot, error_msg, 3)
+            botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
 
         finally:
             if file_path.exists():
@@ -229,14 +205,14 @@ def process_new_download(message: Message, url: str):
         try:
             process_gallery_download(message, url)
         except exceptions.FileTooBigException:
-            safe_delete(status_msg)
+            botTools.safe_delete(bot, status_msg)
             error_msg = botTools.send_too_big_msg(bot, message, SAD_TORO_FILE_ID)
-            safe_delete(error_msg, 3)
+            botTools.safe_delete(bot, error_msg, 3)
         except Exception as e:
             logger.error(f"Gallery routine error: {e}")
-            send_message_to_admin("i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
+            botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
 
-        safe_delete(status_msg)
+        botTools.safe_delete(bot, status_msg)
 
 
 def send_media_from_cache(message: Message, url: str, platform_id: str, count: int):
@@ -271,7 +247,7 @@ def send_media_from_cache(message: Message, url: str, platform_id: str, count: i
                     InputMediaVideo(file_id, caption=current_caption, parse_mode="Markdown", supports_streaming=True))
 
         # Send in groups of 10, since it's the maximum that Telegram allows.
-        for chunk in chunk_list(input_media_list, 10):
+        for chunk in util.chunk_list(input_media_list, 10):
             bot.send_media_group(message.chat.id, media=chunk, reply_to_message_id=message.message_id)
 
         # Send Audio if exists
@@ -288,9 +264,8 @@ def process_direct_mp4(message: Message, url: str):
     if util.check_if_mp4_url_is_larger_than_50mb(url):
         error_msg = botTools.send_too_big_msg(bot, message, SAD_TORO_FILE_ID)
 
-        safe_delete(error_msg, 3)
+        botTools.safe_delete(bot, error_msg, 3)
         return
-
 
     status_msg = botTools.send_status_msg(bot, message, DOWNLOADING_GIF_FILE_ID)
 
@@ -308,14 +283,14 @@ def process_direct_mp4(message: Message, url: str):
                 parse_mode="Markdown",
                 reply_to_message_id=message.message_id
             )
-        safe_delete(status_msg)
+        botTools.safe_delete(bot, status_msg)
 
     except Exception as e:
         logger.error(f"Direct download error: {e}")
-        safe_delete(status_msg)
+        botTools.safe_delete(bot, status_msg)
         error_msg = botTools.send_error_msg(bot, message, SAD_TORO_FILE_ID)
-        safe_delete(error_msg, 3)
-        send_message_to_admin("i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
+        botTools.safe_delete(bot, error_msg, 3)
+        botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
     finally:
         if file_path.exists():
             file_path.unlink()
@@ -325,18 +300,18 @@ def process_gallery_download(message: Message, url: str):
     """Handles URLs with multiple photos and videos, uses gallery-dl."""
     util.download_media(url)
 
-    platform = util.get_platform(url)
+    platform_name = util.get_platform(url)
     video_id = util.get_platform_video_id(url)
-    download_path = TEMP_DIR / platform / video_id
+    download_path = TEMP_DIR / platform_name / video_id
 
     if not download_path.exists():
-        send_message_to_admin("i messed up\n\nURL: " + url)
+        botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up\n\nURL: " + url)
         return
 
     files = [f for f in download_path.iterdir() if f.name.startswith(video_id)]
     files = util.naturally_sort_filenames(files)
 
-    if (not util.is_arr_smaller_than_50mb(files)):
+    if not util.is_arr_smaller_than_50mb(files):
         logger.warning(f"Files are bigger than 50mb")
         shutil.rmtree(download_path)
         raise exceptions.FileTooBigException()
@@ -351,12 +326,12 @@ def process_gallery_download(message: Message, url: str):
             if is_photo:
                 msg = bot.send_photo(PRIVATE_CHANNEL_ID, file_obj)
                 file_id = msg.photo[-1].file_id
-                dbtools.add_photo(file_id, video_id, platform)
+                dbtools.add_photo(file_id, video_id, platform_name)
                 media_items.append(InputMediaPhoto(file_id))
             else:
                 msg = bot.send_video(PRIVATE_CHANNEL_ID, file_obj)
                 file_id = msg.video.file_id
-                dbtools.add_video(file_id, video_id, platform)
+                dbtools.add_video(file_id, video_id, platform_name)
                 media_items.append(InputMediaVideo(file_id, supports_streaming=True))
 
     # Add caption to first item
@@ -365,7 +340,7 @@ def process_gallery_download(message: Message, url: str):
         media_items[0].parse_mode = "Markdown"
 
         # Send in groups of 10, since it's the maximum that Telegram allows.
-        for chunk in chunk_list(media_items, 10):
+        for chunk in util.chunk_list(media_items, 10):
             bot.send_media_group(message.chat.id, media=chunk, reply_to_message_id=message.message_id)
 
     audio_files = [f for f in files if f.suffix == '.mp3']
@@ -373,7 +348,7 @@ def process_gallery_download(message: Message, url: str):
         with audio_files[0].open('rb') as f:
             msg = bot.send_audio(PRIVATE_CHANNEL_ID, f)
             file_id = msg.audio.file_id
-            dbtools.add_sound(file_id, video_id, platform)
+            dbtools.add_sound(file_id, video_id, platform_name)
             bot.send_audio(message.chat.id, file_id, reply_to_message_id=message.message_id)
 
     # Delete files
@@ -387,7 +362,7 @@ if __name__ == '__main__':
         logger.info("Bot running on " + platform.platform())
         logger.info("Using yt-dlp: " + yt_dlp.version.__version__)
         logger.info("Bot started...")
-        send_message_to_admin("I'm alive!")
+        botTools.send_message_to_admin(bot, ADMIN_USER_ID, "I'm alive!")
         bot.infinity_polling()
     except KeyboardInterrupt:
         logger.info("Bot stopped by user.")
