@@ -3,3 +3,4 @@ yt-dlp-ejs
 python-dotenv
 pytelegrambotapi
 gallery-dl
+curl-cffi
