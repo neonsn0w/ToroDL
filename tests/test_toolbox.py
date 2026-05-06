@@ -8,7 +8,8 @@ class Test(TestCase):
         "https://x.com/lyanmyan/status/2008657476544327848?s=20": "2008657476544327848",
         "https://vm.tiktok.com/ZNTqk1FHe": "ZNTqk1FHe",
         "https://danbooru.donmai.us/posts/11319200": "11319200",
-        "https://danbooru.donmai.us/posts/11307155?q=video+haru_urara_(umamusume)+": "11307155"
+        "https://danbooru.donmai.us/posts/11307155?q=video+haru_urara_(umamusume)+": "11307155",
+        "https://safebooru.org/index.php?page=post&s=view&id=6734655": "6734655"
     }
 
     def test_validate_url(self):
