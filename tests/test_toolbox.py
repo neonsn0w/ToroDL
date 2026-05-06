@@ -9,7 +9,8 @@ class Test(TestCase):
         "https://vm.tiktok.com/ZNTqk1FHe": "ZNTqk1FHe",
         "https://danbooru.donmai.us/posts/11319200": "11319200",
         "https://danbooru.donmai.us/posts/11307155?q=video+haru_urara_(umamusume)+": "11307155",
-        "https://safebooru.org/index.php?page=post&s=view&id=6734655": "6734655"
+        "https://safebooru.org/index.php?page=post&s=view&id=6734655": "6734655",
+        "https://safebooru.donmai.us/posts/11255569": "11255569"
     }
 
     def test_validate_url(self):

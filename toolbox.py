@@ -20,7 +20,7 @@ SUPPORTED_WEBSITES = [
     "instagram.com",
     "reddit.com",
     "redd.it",
-    "danbooru.donmai.us",
+    "donmai.us",
     "safebooru.org"
 ]
 
@@ -58,7 +58,7 @@ def validate_url(url: str) -> bool:
         # X (Twitter): Must contain /status/
         r'(?:twitter|x)\.com/[^/]+/status/\d+',
 
-        r'danbooru\.donmai\.us\/posts\/(\d+)',
+        r'donmai\.us\/posts\/(\d+)',
 
         r'safebooru\.org'
     ]
@@ -191,7 +191,7 @@ def get_platform_video_id(url: str) -> str:
         return get_ig_video_id(url)
     elif "reddit.com" in url or "redd.it" in url:
         return get_reddit_id(url)
-    elif "danbooru.donmai.us" in url:
+    elif "donmai.us" in url:
         return get_danbooru_post_id(url)
     elif "safebooru.org" in url:
         return get_safebooru_post_id(url)
@@ -210,7 +210,7 @@ def get_platform(url: str) -> str:
         return "instagram"
     elif "reddit.com" in url or "redd.it" in url:
         return "reddit"
-    elif "danbooru.donmai.us" in url:
+    elif "donmai.us" in url:
         return "danbooru"
     elif "safebooru.org" in url:
         return "safebooru"
@@ -233,7 +233,7 @@ def get_filename(url: str, ext: str) -> str:
             return get_ig_video_id(url) + "." + ext
         elif "reddit.com" in url or "redd.it" in url:
             return get_reddit_id(url) + "." + ext
-        elif "danbooru.donmai.us" in url:
+        elif "donmai.us" in url:
             return get_danbooru_post_id(url) + "." + ext
         elif "safebooru.org" in url:
             return get_safebooru_post_id(url) + "." + ext
