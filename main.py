@@ -43,6 +43,7 @@ dbtools.prepare_db()  # Creates the DB if not present
 BIGRAT_FILE_ID = botTools.get_photo_file_id(bot, "img/bigrat.jpg", PRIVATE_CHANNEL_ID)
 DOWNLOADING_GIF_FILE_ID = botTools.get_document_file_id(bot, "img/toro-animated-256.gif", PRIVATE_CHANNEL_ID)
 SAD_TORO_FILE_ID = botTools.get_photo_file_id(bot, "img/toro-sad-256.png", PRIVATE_CHANNEL_ID)
+CUBE_TORO_FILE_ID = botTools.get_photo_file_id(bot, "img/cube.png", PRIVATE_CHANNEL_ID)
 
 
 # --- Handlers ---
@@ -64,6 +65,17 @@ def send_random_cat_pic(message: Message):
         bot.send_photo(message.chat.id, f, reply_to_message_id=message.message_id)
 
     os.remove("catpic.cat")
+
+
+@bot.message_handler(commands=['cube'])
+def send_cube_pic(message: Message):
+    """Send a very cute fanart of Toro inside a Gamecube."""
+    # Thank you lucabeagle510
+
+    if CUBE_TORO_FILE_ID:
+        bot.send_photo(message.chat.id, CUBE_TORO_FILE_ID,
+                       caption="Art by https://www.instagram.com/lucabeagle510/\n\nThank you so much!",
+                       reply_to_message_id=message.message_id)
 
 
 @bot.message_handler(commands=['httpcat'])

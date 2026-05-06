@@ -32,6 +32,7 @@ def cleanup():
     if os.path.exists("yt-dlp-downloads"):
         shutil.rmtree("yt-dlp-downloads")
 
+
 def is_supported_website(msg: str) -> bool:
     return any(website in msg for website in SUPPORTED_WEBSITES)
 
@@ -55,7 +56,7 @@ def validate_url(url: str) -> bool:
 
         # X (Twitter): Must contain /status/
         r'(?:twitter|x)\.com/[^/]+/status/\d+',
-        
+
         r'danbooru\.donmai\.us\/posts\/(\d+)'
     ]
 
@@ -171,6 +172,7 @@ def get_reddit_id(url: str) -> str:
 def get_danbooru_post_id(url: str) -> str:
     return re.search(r'/posts/(\d+)', url).group(1)
 
+
 def get_platform_video_id(url: str) -> str:
     if "youtube.com" in url or "youtu.be" in url:
         return get_yt_video_id(url)
@@ -267,6 +269,7 @@ def download_video_720(link: str, filename: str):
     }
     with yt_dlp.YoutubeDL(youtube_dl_options) as ydl:
         return ydl.download([link])
+
 
 def download_media(url: str):
     config.load()  # config file is in /etc/gallery-dl.conf or %APPDATA%\gallery-dl\config.json
