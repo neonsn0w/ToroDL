@@ -11,7 +11,7 @@ from pathlib import Path
 import telebot
 import yt_dlp
 from dotenv import load_dotenv
-from telebot.types import InputMediaPhoto, InputMediaVideo, Message
+from telebot.types import InputMediaPhoto, InputMediaVideo, Message, InputMediaDocument
 
 import botTools
 import dbtools
@@ -206,7 +206,6 @@ def process_new_download(message: Message, url: str):
             logger.error(f"Single video error: {e}")
             botTools.safe_delete(bot, status_msg)
             error_msg = botTools.send_error_msg(bot, message, SAD_TORO_FILE_ID)
-
             botTools.safe_delete(bot, error_msg, 3)
             botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
 
@@ -238,6 +237,9 @@ def send_media_from_cache(message: Message, url: str, platform_id: str, count: i
         if media_type == "photo":
             bot.send_photo(message.chat.id, file_id, caption=caption,
                            parse_mode="Markdown", reply_to_message_id=message.message_id)
+        elif media_type == "gif":
+            bot.send_document(message.chat.id, file_id, caption=caption,
+                              parse_mode="Markdown", reply_to_message_id=message.message_id)
         else:
             bot.send_video(message.chat.id, file_id, caption=caption,
                            supports_streaming=True, parse_mode="Markdown",
@@ -254,6 +256,8 @@ def send_media_from_cache(message: Message, url: str, platform_id: str, count: i
 
             if media_type == "photo":
                 input_media_list.append(InputMediaPhoto(file_id, caption=current_caption, parse_mode="Markdown"))
+            elif media_type == "gif":
+                input_media_list.append(InputMediaDocument(file_id, caption=current_caption, parse_mode="Markdown"))
             elif media_type == "video":
                 input_media_list.append(
                     InputMediaVideo(file_id, caption=current_caption, parse_mode="Markdown", supports_streaming=True))
@@ -330,7 +334,7 @@ def process_gallery_download(message: Message, url: str):
 
     media_items = []
 
-    media_files = [f for f in files if f.suffix in ['.webp', '.jpg', '.png', '.mp4']]
+    media_files = [f for f in files if f.suffix in ['.webp', '.jpg', '.png', '.mp4', '.gif']]
 
     for f in media_files:
         is_photo = f.suffix in ['.webp', '.jpg', '.png']
@@ -340,6 +344,11 @@ def process_gallery_download(message: Message, url: str):
                 file_id = msg.photo[-1].file_id
                 dbtools.add_photo(file_id, video_id, platform_name)
                 media_items.append(InputMediaPhoto(file_id))
+            elif f.suffix == '.gif':
+                msg = bot.send_document(PRIVATE_CHANNEL_ID, file_obj)
+                file_id = msg.document.file_id
+                dbtools.add_gif(file_id, video_id, platform_name)
+                media_items.append(InputMediaDocument(file_id))
             else:
                 msg = bot.send_video(PRIVATE_CHANNEL_ID, file_obj)
                 file_id = msg.video.file_id

@@ -8,11 +8,25 @@ def prepare_db():
     cursor.execute("""
                    CREATE TABLE IF NOT EXISTS videos
                    (
-                       file_id     VARCHAR(255) PRIMARY KEY,
-                       platform_id VARCHAR(255) NOT NULL,
-                       platform    VARCHAR(255),
-                       media_type  VARCHAR(255)
-                   );""")
+                       file_id
+                       VARCHAR
+                   (
+                       255
+                   ) PRIMARY KEY,
+                       platform_id VARCHAR
+                   (
+                       255
+                   ) NOT NULL,
+                       platform VARCHAR
+                   (
+                       255
+                   ),
+                       media_type VARCHAR
+                   (
+                       255
+                   )
+                       );""")
+
 
 def get_number_of_media_by_platform_id(platform_id: str) -> int:
     connection = sqlite3.connect('video_ids.db')
@@ -37,6 +51,7 @@ def add_video(file_id: str, platform_id: str, platform: str):
         connection.close()
         raise e
 
+
 def add_photo(file_id: str, platform_id: str, platform: str):
     connection = sqlite3.connect('video_ids.db')
     try:
@@ -48,6 +63,20 @@ def add_photo(file_id: str, platform_id: str, platform: str):
     except Exception as e:
         connection.close()
         raise e
+
+
+def add_gif(file_id: str, platform_id: str, platform: str):
+    connection = sqlite3.connect('video_ids.db')
+    try:
+        cursor = connection.cursor()
+        cursor.execute(f"""
+                       INSERT INTO videos VALUES ("{file_id}", "{platform_id}", "{platform}", "gif");""")
+
+        connection.commit()
+    except Exception as e:
+        connection.close()
+        raise e
+
 
 def add_sound(file_id: str, platform_id: str, platform: str):
     connection = sqlite3.connect('video_ids.db')
@@ -61,6 +90,7 @@ def add_sound(file_id: str, platform_id: str, platform: str):
         connection.close()
         raise e
 
+
 def get_first_media(platform_id: str):
     connection = sqlite3.connect('video_ids.db')
     cursor = connection.cursor()
@@ -71,6 +101,7 @@ def get_first_media(platform_id: str):
 
     return cursor.fetchone()
 
+
 def get_first_sound(platform_id: str):
     connection = sqlite3.connect('video_ids.db')
     cursor = connection.cursor()
@@ -80,6 +111,7 @@ def get_first_sound(platform_id: str):
                    WHERE v.platform_id = "{platform_id}" AND v.media_type="sound";""")
 
     return cursor.fetchone()
+
 
 def get_all_media(platform_id: str):
     connection = sqlite3.connect('video_ids.db')
