@@ -12,16 +12,35 @@ def prepare_db():
                        VARCHAR
                    (
                        255
-                   ) PRIMARY KEY,
+                   ),
                        platform_id VARCHAR
                    (
                        255
-                   ) NOT NULL,
+                   ),
                        platform VARCHAR
                    (
                        255
                    ),
                        media_type VARCHAR
+                   (
+                       255
+                   ),
+                       PRIMARY KEY(file_id, platform_id, platform)
+                       );""")
+
+    cursor.execute("""
+                   CREATE TABLE IF NOT EXISTS descriptions
+                   (
+                       description
+                       TEXT
+                   (
+                       255
+                   ),
+                       platform_id VARCHAR
+                   (
+                       255
+                   ) PRIMARY KEY,
+                       platform VARCHAR
                    (
                        255
                    )
@@ -34,6 +53,17 @@ def get_number_of_media_by_platform_id(platform_id: str) -> int:
     cursor.execute(f"""
                    SELECT COUNT(*)
                    FROM videos
+                   WHERE platform_id = "{platform_id}";""")
+
+    return cursor.fetchone()[0]
+
+
+def get_number_of_descriptions_by_platform_id(platform_id: str) -> int:
+    connection = sqlite3.connect('video_ids.db')
+    cursor = connection.cursor()
+    cursor.execute(f"""
+                   SELECT COUNT(*)
+                   FROM descriptions
                    WHERE platform_id = "{platform_id}";""")
 
     return cursor.fetchone()[0]
@@ -91,6 +121,20 @@ def add_sound(file_id: str, platform_id: str, platform: str):
         raise e
 
 
+def add_description(description: str, platform_id: str, platform: str):
+    connection = sqlite3.connect('video_ids.db')
+    try:
+        cursor = connection.cursor()
+        query = ("""
+                           INSERT INTO descriptions VALUES (?, ?, ?);""")
+        cursor.execute(query, (description, platform_id, platform))
+
+        connection.commit()
+    except Exception as e:
+        connection.close()
+        raise e
+
+
 def get_first_media(platform_id: str):
     connection = sqlite3.connect('video_ids.db')
     cursor = connection.cursor()
@@ -109,6 +153,16 @@ def get_first_sound(platform_id: str):
                    SELECT *
                    FROM videos AS v
                    WHERE v.platform_id = "{platform_id}" AND v.media_type="sound";""")
+
+    return cursor.fetchone()
+
+def get_first_description(platform_id: str):
+    connection = sqlite3.connect('video_ids.db')
+    cursor = connection.cursor()
+    cursor.execute(f"""
+                   SELECT *
+                   FROM descriptions AS d
+                   WHERE d.platform_id = "{platform_id}";""")
 
     return cursor.fetchone()
 

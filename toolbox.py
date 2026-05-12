@@ -24,6 +24,11 @@ SUPPORTED_WEBSITES = [
     "safebooru.org"
 ]
 
+DESCRIPTION_TAGS = {
+    "instagram" : "description",
+    "tiktok" : "desc"
+}
+
 
 def cleanup():
     """Removes files left from the last time that the bot was executed."""
@@ -242,6 +247,8 @@ def get_filename(url: str, ext: str) -> str:
     except Exception as e:
         return "-1"
 
+def get_description_tag(platform: str) -> str:
+    return DESCRIPTION_TAGS.get(platform, "None")
 
 def is_video_longer_than(url: str, time: int) -> bool:
     ydl_opts = {
@@ -289,6 +296,12 @@ def download_media(url: str):
     config.set(("extractor",), "cookies", "cookies.txt")
     config.set(("extractor",), "directory", [get_platform(url), get_platform_video_id(url)])
     config.set(("extractor",), "filename", get_platform_video_id(url) + "_{num}.{extension}")
+
+    config.set(("postprocessor", "metadata"), "module", "metadata")
+
+    config.set(("postprocessor", "metadata"), "event", "post")
+    config.set(("postprocessor", "metadata"), "filename", get_platform_video_id(url) + ".txt")
+    config.set(("postprocessor", "metadata"), "content", "{content or description}")
 
     j = job.DownloadJob(url)
 

@@ -1,3 +1,5 @@
+import json
+import html
 import logging
 import os
 import platform
@@ -44,6 +46,8 @@ BIGRAT_FILE_ID = botTools.get_photo_file_id(bot, "img/bigrat.jpg", PRIVATE_CHANN
 DOWNLOADING_GIF_FILE_ID = botTools.get_document_file_id(bot, "img/toro-animated-256.gif", PRIVATE_CHANNEL_ID)
 SAD_TORO_FILE_ID = botTools.get_photo_file_id(bot, "img/toro-sad-256.png", PRIVATE_CHANNEL_ID)
 CUBE_TORO_FILE_ID = botTools.get_photo_file_id(bot, "img/cube.png", PRIVATE_CHANNEL_ID)
+
+MAX_DESCRIPTION_LENGTH = 900
 
 
 # --- Handlers ---
@@ -228,7 +232,10 @@ def process_new_download(message: Message, url: str):
 
 def send_media_from_cache(message: Message, url: str, platform_id: str, count: int):
     """Handles sending media that already exists in the database."""
-    caption = f"Here's your [media]({url}) >w<"
+    if dbtools.get_number_of_descriptions_by_platform_id(platform_id) > 0:
+        caption = "<blockquote>" + html.escape(dbtools.get_first_description(platform_id)[0]) + "</blockquote>\n" + f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
+    else:
+        caption = f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
 
     if count == 1:
         media_data = dbtools.get_first_media(platform_id)
@@ -236,13 +243,13 @@ def send_media_from_cache(message: Message, url: str, platform_id: str, count: i
 
         if media_type == "photo":
             bot.send_photo(message.chat.id, file_id, caption=caption,
-                           parse_mode="Markdown", reply_to_message_id=message.message_id)
+                           parse_mode="HTML", reply_to_message_id=message.message_id)
         elif media_type == "gif":
             bot.send_document(message.chat.id, file_id, caption=caption,
-                              parse_mode="Markdown", reply_to_message_id=message.message_id)
+                              parse_mode="HTML", reply_to_message_id=message.message_id)
         else:
             bot.send_video(message.chat.id, file_id, caption=caption,
-                           supports_streaming=True, parse_mode="Markdown",
+                           supports_streaming=True, parse_mode="HTML",
                            reply_to_message_id=message.message_id)
     else:
         # Multi-media handling (Albums)
@@ -255,12 +262,12 @@ def send_media_from_cache(message: Message, url: str, platform_id: str, count: i
             current_caption = caption if index == 0 else None
 
             if media_type == "photo":
-                input_media_list.append(InputMediaPhoto(file_id, caption=current_caption, parse_mode="Markdown"))
+                input_media_list.append(InputMediaPhoto(file_id, caption=current_caption, parse_mode="HTML"))
             elif media_type == "gif":
-                input_media_list.append(InputMediaDocument(file_id, caption=current_caption, parse_mode="Markdown"))
+                input_media_list.append(InputMediaDocument(file_id, caption=current_caption, parse_mode="HTML"))
             elif media_type == "video":
                 input_media_list.append(
-                    InputMediaVideo(file_id, caption=current_caption, parse_mode="Markdown", supports_streaming=True))
+                    InputMediaVideo(file_id, caption=current_caption, parse_mode="HTML", supports_streaming=True))
 
         # Send in groups of 10, since it's the maximum that Telegram allows.
         for chunk in util.chunk_list(input_media_list, 10):
@@ -319,6 +326,7 @@ def process_gallery_download(message: Message, url: str):
     platform_name = util.get_platform(url)
     video_id = util.get_platform_video_id(url)
     download_path = TEMP_DIR / platform_name / video_id
+    description_tag = util.get_description_tag(platform_name)
 
     if not download_path.exists():
         botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up\n\nURL: " + url)
@@ -357,8 +365,26 @@ def process_gallery_download(message: Message, url: str):
 
     # Add caption to first item
     if media_items:
-        media_items[0].caption = f"Here's your [media]({url}) >w<"
-        media_items[0].parse_mode = "Markdown"
+        metadata_files = [f for f in files if f.suffix in ['.txt']]
+
+        if len(metadata_files) != 0:
+            try:
+                with open(metadata_files[0], 'r') as file:
+                    description = json.load(file)[description_tag]
+
+                    if len(description) > MAX_DESCRIPTION_LENGTH:
+                        description = description[:MAX_DESCRIPTION_LENGTH] + "..."
+
+                    media_items[0].caption = "<blockquote>" + html.escape(description) + "</blockquote>\n" + f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
+
+                dbtools.add_description(description, video_id, platform_name)
+            except Exception as e:
+                print("DIOCANEPORCO\n" + e.__str__())
+                media_items[0].caption = f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
+        else:
+            media_items[0].caption = f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
+
+        media_items[0].parse_mode = "HTML"
 
         # Send in groups of 10, since it's the maximum that Telegram allows.
         for chunk in util.chunk_list(media_items, 10):
