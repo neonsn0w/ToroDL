@@ -285,6 +285,8 @@ def send_media_from_cache(message: Message, url: str, platform_id: str, count: i
         if audio_data:
             bot.send_audio(message.chat.id, audio=audio_data[0], reply_to_message_id=message.message_id)
 
+    bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('👌')])
+
 
 def process_direct_mp4(message: Message, url: str):
     """Downloads and sends a direct MP4 link."""
