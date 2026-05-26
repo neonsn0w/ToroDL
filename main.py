@@ -152,6 +152,7 @@ def echo_all(message):
         try:
             yt_url = util.get_yt_video_url(util.get_yt_video_id(url))
             if util.is_video_longer_than(yt_url, 600):  # 10 mins
+                bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('🤯')])
                 return
         except Exception:
             return
@@ -165,13 +166,11 @@ def process_new_download(message: Message, url: str):
     """Orchestrates the download of content from supported platforms."""
 
     is_single_video_platform = any(x in url for x in ["youtube.com", "youtu.be", "reddit.com", "redd.it"])
-    status_msg = botTools.send_status_msg(bot, message, DOWNLOADING_GIF_FILE_ID)
     bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('👀')])
 
     if is_single_video_platform:
         filename = util.get_filename(url, "mp4")
         if filename == "-1":
-            botTools.safe_delete(bot, status_msg)
             return
 
         file_path = Path("yt-dlp-downloads/" + filename)
@@ -200,10 +199,8 @@ def process_new_download(message: Message, url: str):
                         )
                     # Save to DB
                     dbtools.add_video(resp.video.file_id, util.get_platform_video_id(url), util.get_platform(url))
-                    botTools.safe_delete(bot, status_msg)
                     bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('👌')])
                 else:
-                    botTools.safe_delete(bot, status_msg)
                     error_msg = botTools.send_too_big_msg(bot, message, SAD_TORO_FILE_ID)
                     bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('🤯')])
                     botTools.safe_delete(bot, error_msg, 3)
@@ -212,7 +209,6 @@ def process_new_download(message: Message, url: str):
 
         except Exception as e:
             logger.error(f"Single video error: {e}")
-            botTools.safe_delete(bot, status_msg)
             error_msg = botTools.send_error_msg(bot, message, SAD_TORO_FILE_ID)
             bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('😢')])
 
@@ -226,15 +222,12 @@ def process_new_download(message: Message, url: str):
         try:
             process_gallery_download(message, url)
         except exceptions.FileTooBigException:
-            botTools.safe_delete(bot, status_msg)
             error_msg = botTools.send_too_big_msg(bot, message, SAD_TORO_FILE_ID)
             bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('🤯')])
             botTools.safe_delete(bot, error_msg, 3)
         except Exception as e:
             logger.error(f"Gallery routine error: {e}")
             botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
-
-        botTools.safe_delete(bot, status_msg)
 
 
 def send_media_from_cache(message: Message, url: str, platform_id: str, count: int):
@@ -300,13 +293,10 @@ def process_direct_mp4(message: Message, url: str):
         botTools.safe_delete(bot, error_msg, 3)
         return
 
-    status_msg = botTools.send_status_msg(bot, message, DOWNLOADING_GIF_FILE_ID)
     bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('👀')])
 
     try:
         urllib.request.urlretrieve(url, filename)
-
-        bot.edit_message_text("=w= | Uploading...", chat_id=message.chat.id, message_id=status_msg.message_id)
 
         with file_path.open('rb') as video_file:
             bot.send_video(
@@ -317,12 +307,10 @@ def process_direct_mp4(message: Message, url: str):
                 parse_mode="Markdown",
                 reply_to_message_id=message.message_id
             )
-        botTools.safe_delete(bot, status_msg)
 
 
     except Exception as e:
         logger.error(f"Direct download error: {e}")
-        botTools.safe_delete(bot, status_msg)
         error_msg = botTools.send_error_msg(bot, message, SAD_TORO_FILE_ID)
         bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('😢')])
         botTools.safe_delete(bot, error_msg, 3)
