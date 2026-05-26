@@ -13,7 +13,7 @@ from pathlib import Path
 import telebot
 import yt_dlp
 from dotenv import load_dotenv
-from telebot.types import InputMediaPhoto, InputMediaVideo, Message, InputMediaDocument
+from telebot.types import InputMediaPhoto, InputMediaVideo, Message, InputMediaDocument, ReactionTypeEmoji
 
 import botTools
 import dbtools
@@ -106,6 +106,7 @@ def send_httpcat_pic(message: Message):
 
     if not notfound:
         with open("httpcat.tmp", "rb") as f:
+            bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('👾')])
             bot.send_photo(message.chat.id, f, reply_to_message_id=message.message_id)
     else:
         with open("httpcat.tmp", "rb") as f:
@@ -165,6 +166,7 @@ def process_new_download(message: Message, url: str):
 
     is_single_video_platform = any(x in url for x in ["youtube.com", "youtu.be", "reddit.com", "redd.it"])
     status_msg = botTools.send_status_msg(bot, message, DOWNLOADING_GIF_FILE_ID)
+    bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('👀')])
 
     if is_single_video_platform:
         filename = util.get_filename(url, "mp4")
@@ -199,9 +201,11 @@ def process_new_download(message: Message, url: str):
                     # Save to DB
                     dbtools.add_video(resp.video.file_id, util.get_platform_video_id(url), util.get_platform(url))
                     botTools.safe_delete(bot, status_msg)
+                    bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('👌')])
                 else:
                     botTools.safe_delete(bot, status_msg)
                     error_msg = botTools.send_too_big_msg(bot, message, SAD_TORO_FILE_ID)
+                    bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('🤯')])
                     botTools.safe_delete(bot, error_msg, 3)
             else:
                 raise FileNotFoundError("Download failed, file not found.")
@@ -210,6 +214,8 @@ def process_new_download(message: Message, url: str):
             logger.error(f"Single video error: {e}")
             botTools.safe_delete(bot, status_msg)
             error_msg = botTools.send_error_msg(bot, message, SAD_TORO_FILE_ID)
+            bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('😢')])
+
             botTools.safe_delete(bot, error_msg, 3)
             botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
 
@@ -222,6 +228,7 @@ def process_new_download(message: Message, url: str):
         except exceptions.FileTooBigException:
             botTools.safe_delete(bot, status_msg)
             error_msg = botTools.send_too_big_msg(bot, message, SAD_TORO_FILE_ID)
+            bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('🤯')])
             botTools.safe_delete(bot, error_msg, 3)
         except Exception as e:
             logger.error(f"Gallery routine error: {e}")
@@ -286,11 +293,13 @@ def process_direct_mp4(message: Message, url: str):
 
     if util.check_if_mp4_url_is_larger_than_50mb(url):
         error_msg = botTools.send_too_big_msg(bot, message, SAD_TORO_FILE_ID)
+        bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('🤯')])
 
         botTools.safe_delete(bot, error_msg, 3)
         return
 
     status_msg = botTools.send_status_msg(bot, message, DOWNLOADING_GIF_FILE_ID)
+    bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('👀')])
 
     try:
         urllib.request.urlretrieve(url, filename)
@@ -308,10 +317,12 @@ def process_direct_mp4(message: Message, url: str):
             )
         botTools.safe_delete(bot, status_msg)
 
+
     except Exception as e:
         logger.error(f"Direct download error: {e}")
         botTools.safe_delete(bot, status_msg)
         error_msg = botTools.send_error_msg(bot, message, SAD_TORO_FILE_ID)
+        bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('😢')])
         botTools.safe_delete(bot, error_msg, 3)
         botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
     finally:
@@ -330,6 +341,7 @@ def process_gallery_download(message: Message, url: str):
 
     if not download_path.exists():
         botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up\n\nURL: " + url)
+        bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('😢')])
         return
 
     files = [f for f in download_path.iterdir() if f.name.startswith(video_id)]
@@ -401,6 +413,7 @@ def process_gallery_download(message: Message, url: str):
     # Delete files
     shutil.rmtree(download_path)
 
+    bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('👌')])
 
 # --- Entry Point ---
 
