@@ -314,7 +314,7 @@ def process_direct_mp4(message: Message, url: str):
         error_msg = botTools.send_error_msg(bot, message, SAD_TORO_FILE_ID)
         bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('😢')])
         botTools.safe_delete(bot, error_msg, 3)
-        botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
+        botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up (yt-dlp)\n\n" + e.__str__() + "\n\nURL: " + url)
     finally:
         if file_path.exists():
             file_path.unlink()
@@ -330,7 +330,7 @@ def process_gallery_download(message: Message, url: str):
     description_tag = util.get_description_tag(platform_name)
 
     if not download_path.exists():
-        botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up\n\nURL: " + url)
+        botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up (gallery-dl)\n\nURL: " + url)
         bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('😢')])
         return
 
