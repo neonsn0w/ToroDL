@@ -253,16 +253,18 @@ def get_description_tag(platform: str) -> str:
     return DESCRIPTION_TAGS.get(platform, "None")
 
 def is_video_longer_than(url: str, time: int) -> bool:
-    if "instagram" in link:
+    if "instagram" in url:
+        global cindex
         cookies = os.listdir('igcookies')
-        cookiefile = open(f'./igcookies{cookies[cindex]}', 'r')
-        if "sessionid" not in cookiefile.read():
-            cookiefile.close()
-            os.remove()
+        with open(f'./igcookies/{cookies[cindex]}', 'r') as cookiefile:
+            cstr = cookiefile.read()
+        if "sessionid" not in cstr:
+            os.remove(f'./igcookies/{cookies[cindex]}')
             if cindex == len(cookies)-1:
                 cindex=0
             else:
                 cindex = cindex+1
+        logging.info(f'using cookie {cookies[cindex]}')        
         ydl_opts = {
             "quiet": True,  # Suppress output
             "no_warnings": True,
@@ -292,17 +294,19 @@ def is_video_longer_than(url: str, time: int) -> bool:
 
 def download_video(link: str, filename: str):
     if "instagram" in link:
+        global cindex
         cookies = os.listdir('igcookies')
         if cindex >= len(cookies):
             cindex = 0
-        cookiefile = open(f'./igcookies{cookies[cindex]}', 'r')
-        if "sessionid" not in cookiefile.read():
-            cookiefile.close()
-            os.remove()
+        with open(f'./igcookies/{cookies[cindex]}', 'r') as cookiefile:
+            cstr = cookiefile.read()
+        if "sessionid" not in cstr:
+            os.remove(f'./igcookies/{cookies[cindex]}')
             if cindex == len(cookies)-1:
                 cindex=0
             else:
                 cindex = cindex+1
+        logging.info(f'using cookie {cookies[cindex]}')     
         youtube_dl_options = {
             "format": "bv[ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4]",
             "outtmpl": f"yt-dlp-downloads/{filename}",
@@ -321,17 +325,19 @@ def download_video(link: str, filename: str):
 
 def download_video_720(link: str, filename: str):
     if "instagram" in link:
+        global cindex
         cookies = os.listdir('igcookies')
         if cindex >= len(cookies):
             cindex = 0
-        cookiefile = open(f'./igcookies{cookies[cindex]}', 'r')
-        if "sessionid" not in cookiefile.read():
-            cookiefile.close()
-            os.remove()
+        with open(f'./igcookies/{cookies[cindex]}', 'r') as cookiefile:
+            cstr = cookiefile.read()
+        if "sessionid" not in cstr:
+            os.remove(f'./igcookies/{cookies[cindex]}')
             if cindex == len(cookies)-1:
                 cindex=0
             else:
                 cindex = cindex+1
+        logging.info(f'using cookie {cookies[cindex]}')     
         youtube_dl_options = {
             "format": "bv[height<=720][ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4][height<=720]",
             "outtmpl": f"yt-dlp-downloads/{filename}",
@@ -349,19 +355,21 @@ def download_video_720(link: str, filename: str):
 
 
 def download_media(url: str):
+    global cindex
     config.load()  # config file is in /etc/gallery-dl.conf or %APPDATA%\gallery-dl\config.json
     if "instagram" in url:
         cookies = os.listdir('igcookies')
         if cindex >= len(cookies):
             cindex=0
-        cookiefile = open(f'./igcookies{cookies[cindex]}', 'r')
-        if "sessionid" not in cookiefile.read():
-            cookiefile.close()
-            os.remove()
+        with open(f'./igcookies/{cookies[cindex]}', 'r') as cookiefile:
+            cstr = cookiefile.read()
+        if "sessionid" not in cstr:
+            os.remove(f'./igcookies/{cookies[cindex]}')
             if cindex == len(cookies)-1:
                 cindex=0
             else:
                 cindex = cindex+1
+        logging.info(f'using cookie {cookies[cindex]}')     
         config.set(("extractor",), "cookies", f'./igcookies/{cookies[cindex]}')
     else:
         config.set(("extractor",), "cookies", "cookies.txt")
