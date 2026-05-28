@@ -255,6 +255,11 @@ def get_description_tag(platform: str) -> str:
 def is_video_longer_than(url: str, time: int) -> bool:
     if "instagram" in link:
         cookies = os.listdir('igcookies')
+        cookiefile = open(f'./igcookies{cookies[cindex]}', 'r')
+        if "sessionid" not in cookiefile.read():
+            cookiefile.close()
+            os.remove()
+            cindex = cindex+1
         ydl_opts = {
             "quiet": True,  # Suppress output
             "no_warnings": True,
@@ -287,6 +292,11 @@ def download_video(link: str, filename: str):
         cookies = os.listdir('igcookies')
         if cindex >= len(cookies):
             cindex = 0
+        cookiefile = open(f'./igcookies{cookies[cindex]}', 'r')
+        if "sessionid" not in cookiefile.read():
+            cookiefile.close()
+            os.remove()
+            cindex = cindex+1
         youtube_dl_options = {
             "format": "bv[ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4]",
             "outtmpl": f"yt-dlp-downloads/{filename}",
@@ -308,6 +318,11 @@ def download_video_720(link: str, filename: str):
         cookies = os.listdir('igcookies')
         if cindex >= len(cookies):
             cindex = 0
+        cookiefile = open(f'./igcookies{cookies[cindex]}', 'r')
+        if "sessionid" not in cookiefile.read():
+            cookiefile.close()
+            os.remove()
+            cindex = cindex+1
         youtube_dl_options = {
             "format": "bv[height<=720][ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4][height<=720]",
             "outtmpl": f"yt-dlp-downloads/{filename}",
@@ -328,6 +343,11 @@ def download_media(url: str):
     config.load()  # config file is in /etc/gallery-dl.conf or %APPDATA%\gallery-dl\config.json
     if "instagram" in url:
         cookies = os.listdir('igcookies')
+        cookiefile = open(f'./igcookies{cookies[cindex]}', 'r')
+        if "sessionid" not in cookiefile.read():
+            cookiefile.close()
+            os.remove()
+            cindex = cindex+1
         config.set(("extractor",), "cookies", f'./igcookies/{cookies[cindex]}')
     else:
         config.set(("extractor",), "cookies", "cookies.txt")
@@ -342,7 +362,11 @@ def download_media(url: str):
 
     j = job.DownloadJob(url)
 
+    cindex = cindex+1
+
     j.run()
+
+    
 
 
 def is_file_smaller_than_50mb(file_path: str) -> bool:
