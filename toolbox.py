@@ -259,7 +259,7 @@ def is_video_longer_than(url: str, time: int) -> bool:
         if "sessionid" not in cookiefile.read():
             cookiefile.close()
             os.remove()
-            if cindex = len(cookies)-1:
+            if cindex == len(cookies)-1:
                 cindex=0
             else:
                 cindex = cindex+1
@@ -299,7 +299,7 @@ def download_video(link: str, filename: str):
         if "sessionid" not in cookiefile.read():
             cookiefile.close()
             os.remove()
-            if cindex = len(cookies)-1:
+            if cindex == len(cookies)-1:
                 cindex=0
             else:
                 cindex = cindex+1
@@ -328,7 +328,7 @@ def download_video_720(link: str, filename: str):
         if "sessionid" not in cookiefile.read():
             cookiefile.close()
             os.remove()
-            if cindex = len(cookies)-1:
+            if cindex == len(cookies)-1:
                 cindex=0
             else:
                 cindex = cindex+1
@@ -358,7 +358,7 @@ def download_media(url: str):
         if "sessionid" not in cookiefile.read():
             cookiefile.close()
             os.remove()
-            if cindex = len(cookies)-1:
+            if cindex == len(cookies)-1:
                 cindex=0
             else:
                 cindex = cindex+1
