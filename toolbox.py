@@ -48,6 +48,9 @@ def validate_url(url: str) -> bool:
         # Instagram: Posts, Reels
         r'instagram\.com/(?:p|reel|reels)/',
 
+        # Instagram Stories
+        r'instagram\.com/stories/[^/]+/',
+
         # TikTok: Matches @user/video/ID AND @user/photo/ID
         # Also catches short links (vm/vt)
         r'tiktok\.com/@[^/]+/(?:video|photo)/\d+',
@@ -161,6 +164,9 @@ def get_tiktok_video_id(url: str) -> str:
 
 
 def get_ig_video_id(url: str) -> str:
+    if "stories/" in url:
+        return re.search(r'stories/[^/]+/(\d+)', url).group(1)
+
     if "reel/" in url:
         return re.search(r'reel/(.{11})', url).group(1)
 
