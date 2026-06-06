@@ -5,3 +5,4 @@ video_ids.db
 video_ids.db-journal
 /venv/
 __pycache__
+/igcookies/
