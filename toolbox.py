@@ -3,11 +3,17 @@ import re
 import logging
 import shutil
 from pathlib import Path
+import glob
 
 from typing import List, Any, Union
 from gallery_dl import config, job
 
+import http.cookiejar
+import urllib.request
+
 import yt_dlp
+
+import botTools
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +45,39 @@ def cleanup():
 
     if os.path.exists("yt-dlp-downloads"):
         shutil.rmtree("yt-dlp-downloads")
+
+
+def is_instagram_cookie_alive(cookie_file: str = "cookies.txt") -> bool:
+    jar = http.cookiejar.MozillaCookieJar()
+    jar.load(cookie_file, ignore_discard=True, ignore_expires=True)
+
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+    opener.addheaders = [("User-Agent", "Mozilla/5.0")]
+
+    try:
+        resp = opener.open("https://www.instagram.com/accounts/edit/", timeout=10)
+        return resp.geturl() == "https://www.instagram.com/accounts/edit/"
+    except Exception as e:
+        print(getattr(e, 'code', 'No HTTP code'))
+        return False
+
+def delete_dead_ig_cookies(folder_path: str = "igcookies"):
+    search_pattern = os.path.join(folder_path, "*.txt")
+    cookie_files = glob.glob(search_pattern)
+
+    if not cookie_files:
+        print(f"No .txt files found in '{folder_path}'.")
+        return
+
+    for file_path in cookie_files:
+        if not is_instagram_cookie_alive(file_path):
+            try:
+                os.remove(file_path)
+                print(f"Deleted dead cookie file: {file_path}")
+            except OSError as e:
+                print(f"Error deleting {file_path}: {e}")
+        else:
+            print(f"Cookie is alive, kept: {file_path}")
 
 
 def is_supported_website(msg: str) -> bool:
@@ -259,31 +298,12 @@ def get_description_tag(platform: str) -> str:
     return DESCRIPTION_TAGS.get(platform, "None")
 
 def is_video_longer_than(url: str, time: int) -> bool:
-    if "instagram" in url:
-        global cindex
-        cookies = os.listdir('igcookies')
-        with open(f'./igcookies/{cookies[cindex]}', 'r') as cookiefile:
-            cstr = cookiefile.read()
-        if "sessionid" not in cstr:
-            os.remove(f'./igcookies/{cookies[cindex]}')
-            if cindex == len(cookies)-1:
-                cindex=0
-            else:
-                cindex = cindex+1
-        logging.info(f'using cookie {cookies[cindex]}')        
-        ydl_opts = {
-            "quiet": True,  # Suppress output
-            "no_warnings": True,
-            "extract_flat": True,  # Faster metadata fetch
-            "cookiefile": f'./igcookies/{cookies[cindex]}',
-        }
-    else:
-        ydl_opts = {
-            "quiet": True,  # Suppress output
-            "no_warnings": True,
-            "extract_flat": True,  # Faster metadata fetch
-            "cookiefile": "cookies.txt",
-        }
+    ydl_opts = {
+        "quiet": True,  # Suppress output
+        "no_warnings": True,
+        "extract_flat": True,  # Faster metadata fetch
+        "cookiefile": "cookies.txt",
+    }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
@@ -299,63 +319,21 @@ def is_video_longer_than(url: str, time: int) -> bool:
 
 
 def download_video(link: str, filename: str):
-    if "instagram" in link:
-        global cindex
-        cookies = os.listdir('igcookies')
-        if cindex >= len(cookies):
-            cindex = 0
-        with open(f'./igcookies/{cookies[cindex]}', 'r') as cookiefile:
-            cstr = cookiefile.read()
-        if "sessionid" not in cstr:
-            os.remove(f'./igcookies/{cookies[cindex]}')
-            if cindex == len(cookies)-1:
-                cindex=0
-            else:
-                cindex = cindex+1
-        logging.info(f'using cookie {cookies[cindex]}')     
-        youtube_dl_options = {
-            "format": "bv[ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4]",
-            "outtmpl": f"yt-dlp-downloads/{filename}",
-            "cookiefile": f'./igcookies/{cookies[cindex]}',
-        }
-        cindex = cindex+1
-    else:
-        youtube_dl_options = {
-            "format": "bv[ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4]",
-            "outtmpl": f"yt-dlp-downloads/{filename}",
-            "cookiefile": "cookies.txt",
-        }
+    youtube_dl_options = {
+        "format": "bv[ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4]",
+        "outtmpl": f"yt-dlp-downloads/{filename}",
+        "cookiefile": "cookies.txt",
+    }
     with yt_dlp.YoutubeDL(youtube_dl_options) as ydl:
         return ydl.download([link])
 
 
 def download_video_720(link: str, filename: str):
-    if "instagram" in link:
-        global cindex
-        cookies = os.listdir('igcookies')
-        if cindex >= len(cookies):
-            cindex = 0
-        with open(f'./igcookies/{cookies[cindex]}', 'r') as cookiefile:
-            cstr = cookiefile.read()
-        if "sessionid" not in cstr:
-            os.remove(f'./igcookies/{cookies[cindex]}')
-            if cindex == len(cookies)-1:
-                cindex=0
-            else:
-                cindex = cindex+1
-        logging.info(f'using cookie {cookies[cindex]}')     
-        youtube_dl_options = {
-            "format": "bv[height<=720][ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4][height<=720]",
-            "outtmpl": f"yt-dlp-downloads/{filename}",
-            "cookiefile": f'./igcookies/{cookies[cindex]}',
-        }
-        cindex = cindex+1
-    else:
-            youtube_dl_options = {
-            "format": "bv[height<=720][ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4][height<=720]",
-            "outtmpl": f"yt-dlp-downloads/{filename}",
-            "cookiefile": "cookies.txt",
-        }
+    youtube_dl_options = {
+        "format": "bv[height<=720][ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4][height<=720]",
+        "outtmpl": f"yt-dlp-downloads/{filename}",
+        "cookiefile": "cookies.txt",
+    }
     with yt_dlp.YoutubeDL(youtube_dl_options) as ydl:
         return ydl.download([link])
 
@@ -369,13 +347,7 @@ def download_media(url: str):
             cindex=0
         with open(f'./igcookies/{cookies[cindex]}', 'r') as cookiefile:
             cstr = cookiefile.read()
-        if "sessionid" not in cstr:
-            os.remove(f'./igcookies/{cookies[cindex]}')
-            if cindex == len(cookies)-1:
-                cindex=0
-            else:
-                cindex = cindex+1
-        logging.info(f'using cookie {cookies[cindex]}')     
+        logging.info(f'using cookie {cookies[cindex]}')
         config.set(("extractor",), "cookies", f'./igcookies/{cookies[cindex]}')
     else:
         config.set(("extractor",), "cookies", "cookies.txt")
@@ -393,8 +365,6 @@ def download_media(url: str):
     cindex = cindex+1
 
     j.run()
-
-    
 
 
 def is_file_smaller_than_50mb(file_path: str) -> bool:

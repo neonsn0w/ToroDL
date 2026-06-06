@@ -332,6 +332,7 @@ def process_gallery_download(message: Message, url: str):
     if not download_path.exists():
         botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up (gallery-dl)\n\nURL: " + url)
         bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('😢')])
+        util.delete_dead_ig_cookies()
         return
 
     files = [f for f in download_path.iterdir() if f.name.startswith(video_id)]
