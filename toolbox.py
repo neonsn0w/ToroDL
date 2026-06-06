@@ -343,6 +343,7 @@ def download_media(url: str):
     config.load()  # config file is in /etc/gallery-dl.conf or %APPDATA%\gallery-dl\config.json
     if "instagram" in url:
         cookies = os.listdir('igcookies')
+        cindex = cindex + 1
         if cindex >= len(cookies):
             cindex=0
         with open(f'./igcookies/{cookies[cindex]}', 'r') as cookiefile:
@@ -361,8 +362,6 @@ def download_media(url: str):
     config.set(("postprocessor", "metadata"), "content", "{content or description}")
 
     j = job.DownloadJob(url)
-
-    cindex = cindex+1
 
     j.run()
 
