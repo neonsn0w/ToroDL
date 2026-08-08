@@ -53,15 +53,34 @@ MAX_DESCRIPTION_LENGTH = 900
 
 # --- Handlers ---
 
-@bot.message_handler(commands=['start'])
+@bot.message_handler(commands=['start'], chat_types=['private'])
 def start(message: Message):
-    huh_toro = IMG_DIR / "huh-toro.jpg"
-    if huh_toro.exists():
-        with huh_toro.open("rb") as f:
-            bot.send_photo(message.chat.id, f, reply_to_message_id=message.message_id)
+    start_text: str = textwrap.dedent("""
+        Hello!
+        Thank you for choosing to use me :3
+        
+        Here are the platforms I support:
+        - Youtube (up to 10 minutes)
+        - Instagram
+        - Tiktok
+        - Twitter (X)
+        - Reddit (supports only videos)
+        - Danbooru
+        - Safebooru
+        - Bigrat.monster
+        
+        To download something just send the link to me and I'll take care of it, or just add me to a group and I'll download all of the links sent in the group.
+        
+        If you want to take a look at my terrible source code, you can do it here:
+        https://github.com/neonsn0w/ToroDL
+        
+        <blockquote>ToroDL is maintained and hosted for free by a single person as a side project, expect breakage at all times.</blockquote> 
+        """)
+
+    bot.reply_to(message, start_text, parse_mode="HTML")
 
 
-@bot.message_handler(commands=['help', 'commands', 'command'])
+@bot.message_handler(commands=['help', 'commands', 'command'], chat_types=['private'])
 def help(messsage: Message):
     help_text: str = textwrap.dedent("""
         To download videos, you just need to send a link to the bot or in a group the bot is part of, no need for commands!
