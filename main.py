@@ -6,6 +6,7 @@ import platform
 import random
 import shutil
 import string
+import textwrap
 import urllib
 import urllib.request
 from pathlib import Path
@@ -58,6 +59,20 @@ def start(message: Message):
     if huh_toro.exists():
         with huh_toro.open("rb") as f:
             bot.send_photo(message.chat.id, f, reply_to_message_id=message.message_id)
+
+
+@bot.message_handler(commands=['help', 'commands', 'command'])
+def help(messsage: Message):
+    help_text: str = textwrap.dedent("""
+        To download videos, you just need to send a link to the bot or in a group the bot is part of, no need for commands!
+        
+        But if you *really* want some commands, here are some not-so-useful ones:
+        - /cat - Get a random cat picture
+        - /httpcat XXX - Remember the meaning of a specific HTTP code through cat pictures
+        - /cube - Take a look at a beautiful fanart
+        """)
+
+    bot.reply_to(messsage, help_text, parse_mode="Markdown")
 
 
 @bot.message_handler(commands=['cat'])
@@ -233,7 +248,8 @@ def process_new_download(message: Message, url: str):
 def send_media_from_cache(message: Message, url: str, platform_id: str, count: int):
     """Handles sending media that already exists in the database."""
     if dbtools.get_number_of_descriptions_by_platform_id(platform_id) > 0:
-        caption = "<blockquote>" + html.escape(dbtools.get_first_description(platform_id)[0]) + "</blockquote>\n" + f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
+        caption = "<blockquote>" + html.escape(dbtools.get_first_description(platform_id)[
+                                                   0]) + "</blockquote>\n" + f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
     else:
         caption = f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
 
@@ -378,7 +394,8 @@ def process_gallery_download(message: Message, url: str):
                     if len(description) > MAX_DESCRIPTION_LENGTH:
                         description = description[:MAX_DESCRIPTION_LENGTH] + "..."
 
-                    media_items[0].caption = "<blockquote>" + html.escape(description) + "</blockquote>\n" + f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
+                    media_items[0].caption = "<blockquote>" + html.escape(
+                        description) + "</blockquote>\n" + f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
 
                 dbtools.add_description(description, video_id, platform_name)
             except Exception as e:
@@ -405,6 +422,7 @@ def process_gallery_download(message: Message, url: str):
     shutil.rmtree(download_path)
 
     bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('👌')])
+
 
 # --- Entry Point ---
 
