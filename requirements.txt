@@ -4,3 +4,4 @@ python-dotenv
 pytelegrambotapi
 gallery-dl
 curl-cffi
+requests

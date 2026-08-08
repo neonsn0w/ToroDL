@@ -19,6 +19,7 @@ from telebot.types import InputMediaPhoto, InputMediaVideo, Message, InputMediaD
 import botTools
 import dbtools
 import exceptions
+import ig_extractor
 import toolbox as util
 
 # --- Setup ---
@@ -267,8 +268,8 @@ def process_new_download(message: Message, url: str):
 def send_media_from_cache(message: Message, url: str, platform_id: str, count: int):
     """Handles sending media that already exists in the database."""
     if dbtools.get_number_of_descriptions_by_platform_id(platform_id) > 0:
-        caption = "<blockquote>" + html.escape(dbtools.get_first_description(platform_id)[
-                                                   0]) + "</blockquote>\n" + f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
+        caption = "<blockquote>" + dbtools.get_first_description(platform_id)[
+                                                   0] + "</blockquote>\n" + f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
     else:
         caption = f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
 
@@ -357,7 +358,16 @@ def process_direct_mp4(message: Message, url: str):
 
 def process_gallery_download(message: Message, url: str):
     """Handles URLs with multiple photos and videos, uses gallery-dl."""
-    util.download_media(url)
+    if "instagram.com" in url:
+        try:
+            caption = ig_extractor.download_media_embed(util.get_ig_video_id(url))
+            already_have_caption = True
+        except Exception as e:
+            already_have_caption = False
+            util.download_media(url)
+    else:
+        already_have_caption = False
+        util.download_media(url)
 
     platform_name = util.get_platform(url)
     video_id = util.get_platform_video_id(url)
@@ -421,7 +431,14 @@ def process_gallery_download(message: Message, url: str):
                 print("DIOCANEPORCO\n" + e.__str__())
                 media_items[0].caption = f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
         else:
-            media_items[0].caption = f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
+            if already_have_caption:
+                if len(caption) > MAX_DESCRIPTION_LENGTH:
+                    caption = caption[:MAX_DESCRIPTION_LENGTH] + "..."
+
+                media_items[0].caption = "<blockquote>" + caption + "</blockquote>\n" + f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
+                dbtools.add_description(caption, video_id, platform_name)
+            else:
+                media_items[0].caption = f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
 
         media_items[0].parse_mode = "HTML"
 
