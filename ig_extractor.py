@@ -30,6 +30,9 @@ def download_media_embed(shortcode: str) -> str:
     if not os.path.exists(f'media-downloads/instagram/{shortcode}'):
         os.makedirs(f"media-downloads/instagram/{shortcode}")
 
+    if 'class="WatchOnInstagram">Watch on Instagram' in r.text:
+        raise ValueError('Exception: Video is not embeddable')
+
     if 'edge_sidecar_to_children' in r.text:
         m = re.search(r'"contextJSON"\s*:\s*("(?:\\.|[^"\\])*")', r.text)
         ctx = json.loads(json.loads(m.group(1)))  # string → object
