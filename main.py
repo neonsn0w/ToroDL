@@ -363,7 +363,7 @@ def process_gallery_download(message: Message, url: str):
             caption = ig_extractor.download_media_embed(util.get_ig_video_id(url))
             already_have_caption = True
         except Exception as e:
-            os.rmdir(f"media-downloads/instagram/{util.get_ig_video_id(url)}")
+            shutil.rmtree(f"media-downloads/instagram/{util.get_ig_video_id(url)}")
             already_have_caption = False
             util.download_media(url)
     else:
