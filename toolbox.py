@@ -1,19 +1,15 @@
+from pathlib import Path
+
+import glob
+import http.cookiejar
+import logging
 import os
 import re
-import logging
 import shutil
-from pathlib import Path
-import glob
-
-from typing import List, Any, Union
-from gallery_dl import config, job
-
-import http.cookiejar
 import urllib.request
-
 import yt_dlp
-
-import botTools
+from gallery_dl import config, job
+from typing import List, Any, Union
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +29,8 @@ SUPPORTED_WEBSITES = [
 ]
 
 DESCRIPTION_TAGS = {
-    "instagram" : "description",
-    "tiktok" : "desc"
+    "instagram": "description",
+    "tiktok": "desc"
 }
 
 
@@ -45,6 +41,14 @@ def cleanup():
 
     if os.path.exists("yt-dlp-downloads"):
         shutil.rmtree("yt-dlp-downloads")
+
+
+def fix_cut_caption_string(s: str) -> str:
+    """Removes broken <a> tags from strings"""
+    if s.count("<a") != s.count("</a"):
+        return s.rsplit("<a", 1)[0]
+
+    return s
 
 
 def is_instagram_cookie_alive(cookie_file: str = "cookies.txt") -> bool:
@@ -60,6 +64,7 @@ def is_instagram_cookie_alive(cookie_file: str = "cookies.txt") -> bool:
     except Exception as e:
         print(getattr(e, 'code', 'No HTTP code'))
         return False
+
 
 def delete_dead_ig_cookies(folder_path: str = "igcookies"):
     search_pattern = os.path.join(folder_path, "*.txt")
@@ -294,8 +299,10 @@ def get_filename(url: str, ext: str) -> str:
     except Exception as e:
         return "-1"
 
+
 def get_description_tag(platform: str) -> str:
     return DESCRIPTION_TAGS.get(platform, "None")
+
 
 def is_video_longer_than(url: str, time: int) -> bool:
     ydl_opts = {
@@ -345,7 +352,7 @@ def download_media(url: str):
         cookies = os.listdir('igcookies')
         cindex = cindex + 1
         if cindex >= len(cookies):
-            cindex=0
+            cindex = 0
         with open(f'./igcookies/{cookies[cindex]}', 'r') as cookiefile:
             cstr = cookiefile.read()
         logging.info(f'using cookie {cookies[cindex]}')

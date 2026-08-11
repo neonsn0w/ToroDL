@@ -1,8 +1,8 @@
+import html
+import json
 import os
 import re
 import requests
-import json
-import html
 
 
 def download_media_embed(shortcode: str) -> str:
@@ -59,7 +59,5 @@ def download_media_embed(shortcode: str) -> str:
         with open(f'media-downloads/instagram/{shortcode}/{shortcode}0.webp', 'wb') as file:
             file.write(img.content)
 
-    # if something breaks, like captions breaking and being cut, this might be the reason
-    # parsing like this is not really my cup of tea but idgaf
-    return r.text.split('</a><br /><br />')[1].split('<div')[0].replace('<br />', '\n').replace('href="',
-                                                                                                'href="https://instagram.com')
+    return ''.join(r.text[r.text.find('</a><br /><br />') + len('</a><br /><br />'):]).split('<div')[0].replace(
+        '<br />', '\n').replace('href="', 'href="https://instagram.com')

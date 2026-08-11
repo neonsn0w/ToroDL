@@ -1,17 +1,17 @@
-import json
+from pathlib import Path
+
 import html
+import json
 import logging
 import os
 import platform
 import random
 import shutil
 import string
+import telebot
 import textwrap
 import urllib
 import urllib.request
-from pathlib import Path
-
-import telebot
 import yt_dlp
 from dotenv import load_dotenv
 from telebot.types import InputMediaPhoto, InputMediaVideo, Message, InputMediaDocument, ReactionTypeEmoji
@@ -269,7 +269,7 @@ def send_media_from_cache(message: Message, url: str, platform_id: str, count: i
     """Handles sending media that already exists in the database."""
     if dbtools.get_number_of_descriptions_by_platform_id(platform_id) > 0:
         caption = "<blockquote>" + dbtools.get_first_description(platform_id)[
-                                                   0] + "</blockquote>\n" + f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
+            0] + "</blockquote>\n" + f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
     else:
         caption = f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
 
@@ -435,8 +435,10 @@ def process_gallery_download(message: Message, url: str):
             if already_have_caption:
                 if len(caption) > MAX_DESCRIPTION_LENGTH:
                     caption = caption[:MAX_DESCRIPTION_LENGTH] + "..."
+                    caption = util.fix_cut_caption_string(caption)
 
-                media_items[0].caption = "<blockquote>" + caption + "</blockquote>\n" + f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
+                media_items[
+                    0].caption = "<blockquote>" + caption + "</blockquote>\n" + f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
                 dbtools.add_description(caption, video_id, platform_name)
             else:
                 media_items[0].caption = f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
