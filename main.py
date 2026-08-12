@@ -45,7 +45,6 @@ bot = telebot.TeleBot(BOT_TOKEN)
 dbtools.prepare_db()  # Creates the DB if not present
 
 BIGRAT_FILE_ID = botTools.get_photo_file_id(bot, "img/bigrat.jpg", PRIVATE_CHANNEL_ID)
-DOWNLOADING_GIF_FILE_ID = botTools.get_document_file_id(bot, "img/toro-animated-256.gif", PRIVATE_CHANNEL_ID)
 SAD_TORO_FILE_ID = botTools.get_photo_file_id(bot, "img/toro-sad-256.png", PRIVATE_CHANNEL_ID)
 CUBE_TORO_FILE_ID = botTools.get_photo_file_id(bot, "img/cube.png", PRIVATE_CHANNEL_ID)
 
