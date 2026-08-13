@@ -62,5 +62,14 @@ def download_media_embed(shortcode: str) -> str:
         with open(f'media-downloads/instagram/{shortcode}/{shortcode}0.webp', 'wb') as file:
             file.write(img.content)
 
-    return ''.join(r.text[r.text.find('</a><br /><br />') + len('</a><br /><br />'):]).split('<div')[0].replace(
-        '<br />', '\n').replace('href="', 'href="https://instagram.com')
+    if '</a><br /><br />' in r.text:
+        if 'CaptionCommentsExpand' in r.text:
+            return ''.join(r.text[r.text.find('</a><br /><br />') + len('</a><br /><br />'):]).split('<div')[0].replace(
+                '<br />', '\n').replace('href="', 'href="https://instagram.com')
+        else: # No comments
+            return ''.join(r.text[r.text.find('</a><br /><br />') + len('</a><br /><br />'):]).split('</div')[
+                0].replace(
+                '<br />', '\n').replace('href="', 'href="https://instagram.com')
+    else: # Empty caption
+        return ''
+
