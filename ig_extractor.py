@@ -33,6 +33,9 @@ def download_media_embed(shortcode: str) -> str:
     if 'class="WatchOnInstagram">Watch on Instagram' in r.text:
         raise ValueError('Exception: Video is not embeddable')
 
+    if 'The link to this photo or video may be broken, or the post may have been removed.' in r.text:
+        raise ValueError('Exception: Video is not embeddable')
+
     if 'edge_sidecar_to_children' in r.text:
         m = re.search(r'"contextJSON"\s*:\s*("(?:\\.|[^"\\])*")', r.text)
         ctx = json.loads(json.loads(m.group(1)))  # string → object

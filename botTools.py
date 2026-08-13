@@ -47,7 +47,7 @@ def safe_delete(bot: telebot.TeleBot, message: telebot.types.Message, delay: int
     try:
         bot.delete_message(message.chat.id, message.message_id)
     except Exception as e:
-        pass # I'll take the gamble
+        pass  # I'll take the gamble
 
 
 def send_message_to_admin(bot: telebot.TeleBot, admin_user_id: str, message_contents: str):
