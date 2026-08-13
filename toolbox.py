@@ -30,7 +30,9 @@ SUPPORTED_WEBSITES = [
 
 DESCRIPTION_TAGS = {
     "instagram": "description",
-    "tiktok": "desc"
+    "tiktok": "desc",
+    "reddit": "selftext",
+    "twitter": "content"
 }
 
 

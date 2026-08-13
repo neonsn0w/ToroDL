@@ -21,6 +21,7 @@ import dbtools
 import exceptions
 import ig_extractor
 import toolbox as util
+from strip_markdown import strip_markdown
 
 # --- Setup ---
 
@@ -102,7 +103,7 @@ def echo_all(message):
 def process_new_download(message: Message, url: str):
     """Orchestrates the download of content from supported platforms."""
 
-    is_single_video_platform = any(x in url for x in ["youtube.com", "youtu.be", "reddit.com", "redd.it"])
+    is_single_video_platform = any(x in url for x in ["youtube.com", "youtu.be"])
     bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('👀')])
 
     if is_single_video_platform:
@@ -322,6 +323,9 @@ def process_gallery_download(message: Message, url: str):
             try:
                 with open(metadata_files[0], 'r') as file:
                     description = json.load(file)[description_tag]
+
+                    if platform_name == "reddit":
+                        description = strip_markdown(description)
 
                     if len(description) > MAX_DESCRIPTION_LENGTH:
                         description = description[:MAX_DESCRIPTION_LENGTH] + "..."
