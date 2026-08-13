@@ -5,3 +5,4 @@ pytelegrambotapi
 gallery-dl
 curl-cffi
 requests
+strip-markdown
