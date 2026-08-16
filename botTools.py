@@ -1,6 +1,7 @@
 import time
 
 import telebot
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 def get_document_file_id(bot: telebot.TeleBot, file_path: str, private_channel_id: str) -> str:
@@ -48,6 +49,17 @@ def safe_delete(bot: telebot.TeleBot, message: telebot.types.Message, delay: int
         bot.delete_message(message.chat.id, message.message_id)
     except Exception as e:
         pass  # I'll take the gamble
+
+
+def gen_spoiler_markup(enable_spoiler: bool = True):
+    markup = InlineKeyboardMarkup()
+    markup.row_width = 1
+    if enable_spoiler:
+        markup.add(InlineKeyboardButton("Toggle Spoiler", callback_data="spoiler_1"))
+    else:
+        markup.add(InlineKeyboardButton("Toggle Spoiler", callback_data="spoiler_0"))
+
+    return markup
 
 
 def send_message_to_admin(bot: telebot.TeleBot, admin_user_id: str, message_contents: str):

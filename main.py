@@ -13,6 +13,7 @@ import urllib
 import urllib.request
 import yt_dlp
 from dotenv import load_dotenv
+from strip_markdown import strip_markdown
 from telebot.types import InputMediaPhoto, InputMediaVideo, Message, InputMediaDocument, ReactionTypeEmoji
 
 import botTools
@@ -21,7 +22,6 @@ import dbtools
 import exceptions
 import ig_extractor
 import toolbox as util
-from strip_markdown import strip_markdown
 
 # --- Setup ---
 
@@ -52,6 +52,29 @@ CUBE_TORO_FILE_ID = botTools.get_photo_file_id(bot, "img/cube.png", PRIVATE_CHAN
 MAX_DESCRIPTION_LENGTH = 900
 
 commands.register_commands(bot, CUBE_TORO_FILE_ID)
+
+
+@bot.callback_query_handler(func=lambda call: True)
+def callback_query(call):
+    new_state = bool(int(call.data.split("_")[1]))
+    current_state = not new_state
+
+    markup = botTools.gen_spoiler_markup(current_state)
+
+    if call.message.photo:
+        file_id = call.message.photo[-1].file_id
+        media = InputMediaPhoto(media=file_id, has_spoiler=new_state, caption=call.message.caption,
+                                caption_entities=call.message.caption_entities)
+    else:
+        file_id = call.message.video.file_id
+        media = InputMediaVideo(media=file_id, has_spoiler=new_state, caption=call.message.caption,
+                                caption_entities=call.message.caption_entities)
+
+    bot.edit_message_media(media, call.message.chat.id, call.message.id, reply_markup=markup)
+    if new_state:
+        bot.answer_callback_query(call.id, "Spoiler enabled!")
+    else:
+        bot.answer_callback_query(call.id, "Spoiler Disabled!")
 
 
 @bot.message_handler(func=lambda msg: True)
@@ -133,7 +156,8 @@ def process_new_download(message: Message, url: str):
                             supports_streaming=True,
                             caption=f"Here's your [video]({url}) >w<",
                             parse_mode="Markdown",
-                            reply_to_message_id=message.message_id
+                            reply_to_message_id=message.message_id,
+                            reply_markup=botTools.gen_spoiler_markup()
                         )
                     # Save to DB
                     dbtools.add_video(resp.video.file_id, util.get_platform_video_id(url), util.get_platform(url))
@@ -182,14 +206,15 @@ def send_media_from_cache(message: Message, url: str, platform_id: str, count: i
 
         if media_type == "photo":
             bot.send_photo(message.chat.id, file_id, caption=caption,
-                           parse_mode="HTML", reply_to_message_id=message.message_id)
+                           parse_mode="HTML", reply_to_message_id=message.message_id,
+                           reply_markup=botTools.gen_spoiler_markup())
         elif media_type == "gif":
             bot.send_document(message.chat.id, file_id, caption=caption,
                               parse_mode="HTML", reply_to_message_id=message.message_id)
         else:
             bot.send_video(message.chat.id, file_id, caption=caption,
                            supports_streaming=True, parse_mode="HTML",
-                           reply_to_message_id=message.message_id)
+                           reply_to_message_id=message.message_id, reply_markup=botTools.gen_spoiler_markup())
     else:
         # Multi-media handling (Albums)
         all_media = dbtools.get_all_media(platform_id)
@@ -351,9 +376,15 @@ def process_gallery_download(message: Message, url: str):
 
         media_items[0].parse_mode = "HTML"
 
-        # Send in groups of 10, since it's the maximum that Telegram allows.
-        for chunk in util.chunk_list(media_items, 10):
-            bot.send_media_group(message.chat.id, media=chunk, reply_to_message_id=message.message_id)
+        if len(media_files) == 1 and (isinstance(media_items[0], InputMediaPhoto) or isinstance(media_items[0], InputMediaVideo)):
+            if isinstance(media_items[0], InputMediaPhoto):
+                bot.send_photo(message.chat.id, media_items[0].media, media_items[0].caption, parse_mode="HTML", reply_markup=botTools.gen_spoiler_markup(), reply_to_message_id=message.message_id)
+            else:
+                bot.send_video(message.chat.id, media_items[0].media, caption=media_items[0].caption, parse_mode="HTML", reply_markup=botTools.gen_spoiler_markup(), reply_to_message_id=message.message_id)
+        else:
+            # Send in groups of 10, since it's the maximum that Telegram allows.
+            for chunk in util.chunk_list(media_items, 10):
+                bot.send_media_group(message.chat.id, media=chunk, reply_to_message_id=message.message_id)
 
     audio_files = [f for f in files if f.suffix == '.mp3']
     if audio_files:
