@@ -337,6 +337,25 @@ def download_video(link: str, filename: str):
         return ydl.download([link])
 
 
+def download_audio(link: str, filename: str):
+    youtube_dl_options = {
+        "format": "ba[ext=m4a]",
+        "outtmpl": f"yt-dlp-downloads/{filename}",
+        "cookiefile": "cookies.txt",
+        "writethumbnail": True,
+        "postprocessors": [
+            {
+                "key": "FFmpegMetadata",
+                "add_metadata": True,
+            },
+        ],
+        "keepvideo": True,
+    }
+    with yt_dlp.YoutubeDL(youtube_dl_options) as ydl:
+        info = ydl.extract_info(link, download=True)
+        return info
+
+
 def download_video_720(link: str, filename: str):
     youtube_dl_options = {
         "format": "bv[height<=720][ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4][height<=720]",

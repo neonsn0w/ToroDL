@@ -62,5 +62,18 @@ def gen_spoiler_markup(enable_spoiler: bool = True):
     return markup
 
 
+def gen_spoiler_markup_with_audio(shortcode: str, enable_spoiler: bool = True):
+    markup = InlineKeyboardMarkup()
+    markup.row_width = 2
+    if enable_spoiler:
+        markup.add(InlineKeyboardButton("Toggle Spoiler", callback_data="spoiler_1"),
+                   InlineKeyboardButton("Download Audio", callback_data="a$" + shortcode))
+    else:
+        markup.add(InlineKeyboardButton("Toggle Spoiler", callback_data="spoiler_0"),
+                   InlineKeyboardButton("Download Audio", callback_data="a$" + shortcode))
+
+    return markup
+
+
 def send_message_to_admin(bot: telebot.TeleBot, admin_user_id: str, message_contents: str):
     bot.send_message(admin_user_id, message_contents)

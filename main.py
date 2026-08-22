@@ -14,7 +14,8 @@ import urllib.request
 import yt_dlp
 from dotenv import load_dotenv
 from strip_markdown import strip_markdown
-from telebot.types import InputMediaPhoto, InputMediaVideo, Message, InputMediaDocument, ReactionTypeEmoji
+from telebot.types import InputMediaPhoto, InputMediaVideo, Message, InputMediaDocument, ReactionTypeEmoji, \
+    CallbackQuery
 
 import botTools
 import commands
@@ -54,12 +55,15 @@ MAX_DESCRIPTION_LENGTH = 900
 commands.register_commands(bot, CUBE_TORO_FILE_ID)
 
 
-@bot.callback_query_handler(func=lambda call: True)
-def callback_query(call):
+def handle_spoiler_button(call):
     new_state = bool(int(call.data.split("_")[1]))
     current_state = not new_state
 
-    markup = botTools.gen_spoiler_markup(current_state)
+    if len(call.message.reply_markup.keyboard[0]) == 1:
+        markup = botTools.gen_spoiler_markup(current_state)
+    else:
+        markup = botTools.gen_spoiler_markup_with_audio(  # Yes, this is awful, I'm aware.
+            call.message.reply_markup.keyboard[0][1].callback_data.split("$")[1], current_state)
 
     if call.message.photo:
         file_id = call.message.photo[-1].file_id
@@ -75,6 +79,64 @@ def callback_query(call):
         bot.answer_callback_query(call.id, "Spoiler enabled!")
     else:
         bot.answer_callback_query(call.id, "Spoiler Disabled!")
+
+
+def handle_audio_button(call: CallbackQuery):
+    shortcode = call.data.split("$")[1]
+    url = util.get_yt_video_url(shortcode)
+    bot.answer_callback_query(call.id, "Getting audio...")
+
+    if send_audio_from_cache(call.message, url, shortcode):
+        bot.set_message_reaction(call.message.chat.id, call.message.id, [ReactionTypeEmoji('👌')])
+        return
+
+    bot.set_message_reaction(call.message.chat.id, call.message.id, [ReactionTypeEmoji('👀')])
+
+    filename = util.get_filename(url, "m4a")
+    file_path = Path("yt-dlp-downloads/" + filename)
+    thumb_path = Path("yt-dlp-downloads/" + util.get_filename(url, "webp"))
+
+    try:
+        info = util.download_audio(url, filename)
+
+        # Upload
+        if file_path.exists():
+            if util.is_file_smaller_than_50mb(str(file_path)):
+                with file_path.open('rb') as audio_file, thumb_path.open('rb') as thumb_file:
+                    resp = bot.send_audio(
+                        chat_id=call.message.chat.id,
+                        audio=audio_file,
+                        title=info.get("track") or info.get("title"),
+                        performer=info.get("artist") or info.get("uploader"),
+                        thumbnail=thumb_file,
+                        caption=f"Here's your [audio]({url}) >w<",
+                        parse_mode="Markdown",
+                        reply_to_message_id=call.message.id
+                    )
+                # Save to DB
+                dbtools.add_sound(resp.audio.file_id, util.get_platform_video_id(url), util.get_platform(url))
+                bot.set_message_reaction(call.message.chat.id, call.message.id, [ReactionTypeEmoji('👌')])
+            else:
+                bot.set_message_reaction(call.message.chat.id, call.message.id, [ReactionTypeEmoji('🤯')])
+        else:
+            raise FileNotFoundError("Download failed, file not found.")
+    except Exception as e:
+        logger.error(f"Single video error: {e}")
+        botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
+
+    finally:
+        if file_path.exists():
+            file_path.unlink()
+        if thumb_path.exists():
+            thumb_path.unlink()
+
+
+@bot.callback_query_handler(func=lambda call: True)
+def callback_query(call):
+    if call.data.startswith("spoiler"):
+        handle_spoiler_button(call)
+    elif call.data.startswith("a"):
+        handle_audio_button(call)
 
 
 @bot.message_handler(func=lambda msg: True)
@@ -157,7 +219,7 @@ def process_new_download(message: Message, url: str):
                             caption=f"Here's your [video]({url}) >w<",
                             parse_mode="Markdown",
                             reply_to_message_id=message.message_id,
-                            reply_markup=botTools.gen_spoiler_markup()
+                            reply_markup=botTools.gen_spoiler_markup_with_audio(util.get_platform_video_id(url))
                         )
                     # Save to DB
                     dbtools.add_video(resp.video.file_id, util.get_platform_video_id(url), util.get_platform(url))
@@ -192,6 +254,23 @@ def process_new_download(message: Message, url: str):
             botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
 
 
+def send_audio_from_cache(message: Message, url: str, platform_id: str) -> bool:
+    row = dbtools.get_first_sound(platform_id)
+
+    if not row:
+        return False
+
+    audio_file_id = row[0]
+
+    bot.send_audio(message.chat.id,
+                   audio=audio_file_id,
+                   reply_to_message_id=message.message_id,
+                   caption=f"Here's your [audio]({url}) >w<",
+                   parse_mode="Markdown")
+
+    return True
+
+
 def send_media_from_cache(message: Message, url: str, platform_id: str, count: int):
     """Handles sending media that already exists in the database."""
     if dbtools.get_number_of_descriptions_by_platform_id(platform_id) > 0:
@@ -200,7 +279,9 @@ def send_media_from_cache(message: Message, url: str, platform_id: str, count: i
     else:
         caption = f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
 
-    if count == 1:
+    _, _, platform_name, _ = dbtools.get_first_media(platform_id)
+
+    if count == 1 or platform_name == "youtube":
         media_data = dbtools.get_first_media(platform_id)
         file_id, _, _, media_type = media_data
 
@@ -212,9 +293,16 @@ def send_media_from_cache(message: Message, url: str, platform_id: str, count: i
             bot.send_document(message.chat.id, file_id, caption=caption,
                               parse_mode="HTML", reply_to_message_id=message.message_id)
         else:
-            bot.send_video(message.chat.id, file_id, caption=caption,
-                           supports_streaming=True, parse_mode="HTML",
-                           reply_to_message_id=message.message_id, reply_markup=botTools.gen_spoiler_markup())
+            if platform_name == "youtube":
+                bot.send_video(message.chat.id, file_id, caption=caption,
+                               supports_streaming=True, parse_mode="HTML",
+                               reply_to_message_id=message.message_id,
+                               reply_markup=botTools.gen_spoiler_markup_with_audio(util.get_platform_video_id(url)))
+            else:
+                bot.send_video(message.chat.id, file_id, caption=caption,
+                               supports_streaming=True, parse_mode="HTML",
+                               reply_to_message_id=message.message_id,
+                               reply_markup=botTools.gen_spoiler_markup())
     else:
         # Multi-media handling (Albums)
         all_media = dbtools.get_all_media(platform_id)
@@ -376,11 +464,14 @@ def process_gallery_download(message: Message, url: str):
 
         media_items[0].parse_mode = "HTML"
 
-        if len(media_files) == 1 and (isinstance(media_items[0], InputMediaPhoto) or isinstance(media_items[0], InputMediaVideo)):
+        if len(media_files) == 1 and (
+                isinstance(media_items[0], InputMediaPhoto) or isinstance(media_items[0], InputMediaVideo)):
             if isinstance(media_items[0], InputMediaPhoto):
-                bot.send_photo(message.chat.id, media_items[0].media, media_items[0].caption, parse_mode="HTML", reply_markup=botTools.gen_spoiler_markup(), reply_to_message_id=message.message_id)
+                bot.send_photo(message.chat.id, media_items[0].media, media_items[0].caption, parse_mode="HTML",
+                               reply_markup=botTools.gen_spoiler_markup(), reply_to_message_id=message.message_id)
             else:
-                bot.send_video(message.chat.id, media_items[0].media, caption=media_items[0].caption, parse_mode="HTML", reply_markup=botTools.gen_spoiler_markup(), reply_to_message_id=message.message_id)
+                bot.send_video(message.chat.id, media_items[0].media, caption=media_items[0].caption, parse_mode="HTML",
+                               reply_markup=botTools.gen_spoiler_markup(), reply_to_message_id=message.message_id)
         else:
             # Send in groups of 10, since it's the maximum that Telegram allows.
             for chunk in util.chunk_list(media_items, 10):
