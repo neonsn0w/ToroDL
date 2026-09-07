@@ -178,7 +178,7 @@ def delete_dead_ig_cookies(bot, admin_user_id, folder_path: str = "igcookies"):
     for cookie in os.listdir(folder_path):
         result = check_instagram_cookie_file(folder_path + "/" + cookie)
         if result["status"] != "VALID" and result["message"] != "RATE_LIMITED":
-            send_message_to_admin(bot, admin_user_id, f"Deleting:\n{cookie}\n{result["status"]}\n{result["message"]}")
+            send_message_to_admin(bot, admin_user_id, f"Deleting:\n{cookie}\n{result['status']}\n{result['message']}")
             os.remove(folder_path + "/" + cookie)
 
     send_message_to_admin(bot, admin_user_id,
