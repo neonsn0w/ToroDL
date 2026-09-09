@@ -244,14 +244,14 @@ def inline_handler(query):
                 id=str(uuid.uuid4()),
                 photo_url=file_id,
                 thumbnail_url=file_id,
-                title="meow",
+                title="Send photo",
                 caption=caption,
                 parse_mode="HTML"))
         elif media_type == "gif":
             results.append(InlineQueryResultDocument(
                 id=str(uuid.uuid4()),
                 document_url=file_id,
-                title="meow",
+                title="Send GIF",
                 mime_type="application/pdf",
                 caption=caption,
                 parse_mode="HTML",
@@ -263,7 +263,7 @@ def inline_handler(query):
                 caption=caption,
                 parse_mode="HTML",
                 thumbnail_url=file_id,
-                title="meow",
+                title="Send video",
                 mime_type="video/mp4",
             ))
 
