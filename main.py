@@ -11,11 +11,13 @@ import string
 import telebot
 import urllib
 import urllib.request
+import uuid
 import yt_dlp
 from dotenv import load_dotenv
 from strip_markdown import strip_markdown
 from telebot.types import InputMediaPhoto, InputMediaVideo, Message, InputMediaDocument, ReactionTypeEmoji, \
-    CallbackQuery
+    CallbackQuery, InlineQueryResultPhoto, InlineQueryResultDocument, InlineQueryResultVideo, InlineQueryResultArticle, \
+    InputTextMessageContent
 
 import botTools
 import commands
@@ -54,6 +56,219 @@ MAX_DESCRIPTION_LENGTH = 900
 
 commands.register_commands(bot, CUBE_TORO_FILE_ID)
 
+@bot.inline_handler(lambda query: True)
+def inline_handler(query):
+    results = []
+
+    if "https://" not in query.query:
+        return
+
+    url = util.extract_https_url(query.query)
+    if not url:
+        return
+
+    if not util.validate_url(url):
+        return
+
+    platform_id = util.get_platform_video_id(url)
+    media_count = dbtools.get_number_of_media_by_platform_id(platform_id)
+
+    filename = util.get_filename(url, "mp4")
+    if filename == "-1":
+        return
+
+    if media_count == 0:
+        if "youtube.com" in url or "youtu.be" in url:
+            try:
+                yt_url = util.get_yt_video_url(util.get_yt_video_id(url))
+                if util.is_video_longer_than(yt_url, 600):  # 10 mins
+                    results.append(InlineQueryResultArticle(
+                        id=str(uuid.uuid4()),
+                        title="🤯 Video too long",
+                        description="Videos longer than 10 minutes are not supported.",
+                        input_message_content=InputTextMessageContent(
+                            "The video you tried to download is longer than 10 minutes.")
+                    ))
+                    bot.answer_inline_query(query.id, results)
+                    return
+            except Exception:
+                return
+
+            file_path = Path("yt-dlp-downloads/" + filename)
+
+            try:
+                if util.is_video_longer_than(url, 150):
+                    util.download_video_720(util.get_yt_video_url(util.get_yt_video_id(url)), filename)
+                else:
+                    util.download_video(util.get_yt_video_url(util.get_yt_video_id(url)), filename)
+            except Exception as e:
+                logger.error(f"Single video error: {e}")
+                botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
+                results.append(InlineQueryResultArticle(
+                    id=str(uuid.uuid4()),
+                    title="😢 Error",
+                    description="An error occurred.",
+                    input_message_content=InputTextMessageContent(
+                        "An error occurred.")
+                ))
+                bot.answer_inline_query(query.id, results)
+                return
+
+            if file_path.exists():
+                if util.is_file_smaller_than_50mb(str(file_path)):
+                    with file_path.open("rb") as f:
+                        dbtools.add_video(bot.send_video(PRIVATE_CHANNEL_ID, f).video.file_id,
+                                          util.get_platform_video_id(url), util.get_platform(url))
+                else:
+                    results.append(InlineQueryResultArticle(
+                        id=str(uuid.uuid4()),
+                        title="🤯 File too large",
+                        description="The video exceeds Telegram's 50MB bot upload limit.",
+                        input_message_content=InputTextMessageContent(
+                            "The video exceeds Telegram's 50MB bot upload limit.")
+                    ))
+                    bot.answer_inline_query(query.id, results)
+                    return
+            else:
+                botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up (yt-dlp)\n\nURL: " + url)
+                results.append(InlineQueryResultArticle(
+                    id=str(uuid.uuid4()),
+                    title="😢 Error",
+                    description="An error occurred.",
+                    input_message_content=InputTextMessageContent(
+                        "An error occurred.")
+                ))
+                bot.answer_inline_query(query.id, results)
+                return
+        else:
+            if "instagram.com" in url:
+                try:
+                    caption = ig_extractor.download_media_embed(util.get_ig_video_id(url))
+                    already_have_caption = True
+                except Exception as e:
+                    shutil.rmtree(f"media-downloads/instagram/{util.get_ig_video_id(url)}")
+                    already_have_caption = False
+                    util.download_media(url)
+            else:
+                already_have_caption = False
+                util.download_media(url)
+
+            platform_name = util.get_platform(url)
+            video_id = util.get_platform_video_id(url)
+            download_path = TEMP_DIR / platform_name / video_id
+            description_tag = util.get_description_tag(platform_name)
+
+            if not download_path.exists():
+                botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up (gallery-dl)\n\nURL: " + url)
+                util.delete_dead_ig_cookies(bot, ADMIN_USER_ID)
+                results.append(InlineQueryResultArticle(
+                    id=str(uuid.uuid4()),
+                    title="😢 Error",
+                    description="An error occurred.",
+                    input_message_content=InputTextMessageContent(
+                        "An error occurred.")
+                ))
+                bot.answer_inline_query(query.id, results)
+                return
+
+            files = [f for f in download_path.iterdir() if f.name.startswith(video_id)]
+            files = util.naturally_sort_filenames(files)
+
+            if not util.is_arr_smaller_than_50mb(files):
+                logger.warning(f"Files are bigger than 50mb")
+                shutil.rmtree(download_path)
+                results.append(InlineQueryResultArticle(
+                    id=str(uuid.uuid4()),
+                    title="🤯 File too large",
+                    description="The media exceeds Telegram's 50MB bot upload limit.",
+                    input_message_content=InputTextMessageContent(
+                        "The media exceeds Telegram's 50MB bot upload limit.")
+                ))
+                pass
+
+            media_files = [f for f in files if f.suffix in ['.webp', '.jpg', '.png', '.mp4', '.gif']]
+
+            for f in media_files:
+                is_photo = f.suffix in ['.webp', '.jpg', '.png']
+                with f.open('rb') as file_obj:
+                    if is_photo:
+                        msg = bot.send_photo(PRIVATE_CHANNEL_ID, file_obj)
+                        file_id = msg.photo[-1].file_id
+                        dbtools.add_photo(file_id, video_id, platform_name)
+                    elif f.suffix == '.gif':
+                        msg = bot.send_document(PRIVATE_CHANNEL_ID, file_obj)
+                        file_id = msg.document.file_id
+                        dbtools.add_gif(file_id, video_id, platform_name)
+                    else:
+                        msg = bot.send_video(PRIVATE_CHANNEL_ID, file_obj)
+                        file_id = msg.video.file_id
+                        dbtools.add_video(file_id, video_id, platform_name)
+
+            metadata_files = [f for f in files if f.suffix in ['.txt']]
+
+            if len(metadata_files) != 0:
+                try:
+                    with open(metadata_files[0], 'r') as file:
+                        description = json.load(file)[description_tag]
+
+                        if platform_name == "reddit":
+                            description = strip_markdown(description)
+
+                        if len(description) > MAX_DESCRIPTION_LENGTH:
+                            description = description[:MAX_DESCRIPTION_LENGTH] + "..."
+
+                    dbtools.add_description(description, video_id, platform_name)
+                except Exception as e:
+                    pass
+            else:
+                if already_have_caption:
+                    if len(caption) > MAX_DESCRIPTION_LENGTH:
+                        caption = caption[:MAX_DESCRIPTION_LENGTH] + "..."
+                        caption = util.fix_cut_caption_string(caption)
+
+                    dbtools.add_description(caption, video_id, platform_name)
+
+    if dbtools.get_number_of_descriptions_by_platform_id(platform_id) > 0:
+        caption = "<blockquote>" + dbtools.get_first_description(platform_id)[
+            0] + "</blockquote>\n" + f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
+    else:
+        caption = f'Here\'s your <a href="{url}">media</a> &gt;w&lt;'
+
+    all_media = dbtools.get_all_media(platform_id)
+
+    for index, row in enumerate(all_media):
+        file_id, _, _, media_type = row
+
+        if media_type == "photo":
+            results.append(InlineQueryResultPhoto(
+                id=str(uuid.uuid4()),
+                photo_url=file_id,
+                thumbnail_url=file_id,
+                title="meow",
+                caption=caption,
+                parse_mode="HTML"))
+        elif media_type == "gif":
+            results.append(InlineQueryResultDocument(
+                id=str(uuid.uuid4()),
+                document_url=file_id,
+                title="meow",
+                mime_type="application/pdf",
+                caption=caption,
+                parse_mode="HTML",
+            ))
+        elif media_type == "video":
+            results.append(InlineQueryResultVideo(
+                id=str(uuid.uuid4()),
+                video_url=file_id,
+                caption=caption,
+                parse_mode="HTML",
+                thumbnail_url=file_id,
+                title="meow",
+                mime_type="video/mp4",
+            ))
+
+    if len(results) > 0:
+        bot.answer_inline_query(query.id, results)
 
 def handle_spoiler_button(call):
     new_state = bool(int(call.data.split("_")[1]))
