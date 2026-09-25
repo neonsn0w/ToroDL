@@ -226,7 +226,10 @@ def validate_url(url: str) -> bool:
         r'|watch/\?[^#\s]*v=\d+'
         r'|(?:permalink|story)\.php\?[^#\s]*story_fbid='
         r')',
-        r'fb\.watch/[a-zA-Z0-9_-]+'
+        r'fb\.watch/[a-zA-Z0-9_-]+',
+        
+        # Twitch clips
+        r'(?:clips\.twitch\.tv/|twitch\.tv/[^/]+/clip/)[^/?\s]+',
     ]
 
     for pattern in patterns:
@@ -403,6 +406,8 @@ def get_facebook_post_id(url: str) -> str | None:
 
     return None
 
+def get_twitch_clip_id(url: str) -> str:
+    return re.search(r'(?:clips\.twitch\.tv/|/clip/)([^/?]+)', url).group(1)
 
 def get_platform_video_id(url: str) -> str:
     if "youtube.com" in url or "youtu.be" in url:
@@ -421,6 +426,8 @@ def get_platform_video_id(url: str) -> str:
         return get_safebooru_post_id(url)
     elif "facebook.com" in url:
         return get_facebook_post_id(url)
+    elif "twitch.tv" in url:
+        return get_twitch_clip_id(url)
     else:
         return "-1"
 
@@ -442,6 +449,8 @@ def get_platform(url: str) -> str:
         return "safebooru"
     elif "facebook.com" in url:
         return "facebook"
+    elif "twitch.tv" in url:
+        return "twitch"
     else:
         return "-1"
 
@@ -467,6 +476,8 @@ def get_filename(url: str, ext: str) -> str:
             return get_safebooru_post_id(url) + "." + ext
         elif "facebook.com" in url:
             return get_facebook_post_id(url) + "." + ext
+        elif "twitch.tv" in url:
+            return get_twitch_clip_id(url) + "." + ext
         else:
             return "-1"
     except Exception as e:
@@ -530,6 +541,15 @@ def download_audio(link: str, filename: str):
 def download_video_720(link: str, filename: str):
     youtube_dl_options = {
         "format": "bv[height<=720][ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4][height<=720]",
+        "outtmpl": f"yt-dlp-downloads/{filename}",
+        "cookiefile": "cookies.txt",
+    }
+    with yt_dlp.YoutubeDL(youtube_dl_options) as ydl:
+        return ydl.download([link])
+
+def download_video_1080(link: str, filename: str):
+    youtube_dl_options = {
+        "format": "bv[height<=1080][ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4][height<=1080]",
         "outtmpl": f"yt-dlp-downloads/{filename}",
         "cookiefile": "cookies.txt",
     }

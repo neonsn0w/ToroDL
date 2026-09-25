@@ -3,13 +3,13 @@ from pathlib import Path
 import html
 import json
 import logging
-import threading
 import os
 import platform
 import random
 import shutil
 import string
 import telebot
+import threading
 import urllib
 import urllib.request
 import uuid
@@ -59,6 +59,7 @@ commands.register_commands(bot, CUBE_TORO_FILE_ID)
 
 active_downloads = {}
 download_lock = threading.Lock()
+
 
 @bot.inline_handler(lambda query: True)
 def inline_handler(query):
@@ -123,7 +124,8 @@ def inline_handler(query):
                             util.download_video(util.get_yt_video_url(util.get_yt_video_id(url)), filename)
                     except Exception as e:
                         logger.error(f"Single video error: {e}")
-                        botTools.send_message_to_admin(bot, ADMIN_USER_ID, "i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
+                        botTools.send_message_to_admin(bot, ADMIN_USER_ID,
+                                                       "i messed up\n\n" + e.__str__() + "\n\nURL: " + url)
                         results.append(InlineQueryResultArticle(
                             id=str(uuid.uuid4()),
                             title="😢 Error",
@@ -295,6 +297,7 @@ def inline_handler(query):
     if len(results) > 0:
         bot.answer_inline_query(query.id, results)
 
+
 def handle_spoiler_button(call):
     new_state = bool(int(call.data.split("_")[1]))
     current_state = not new_state
@@ -428,7 +431,7 @@ def echo_all(message):
 def process_new_download(message: Message, url: str):
     """Orchestrates the download of content from supported platforms."""
 
-    is_single_video_platform = any(x in url for x in ["youtube.com", "youtu.be"])
+    is_single_video_platform = any(x in url for x in ["youtube.com", "youtu.be", "twitch.tv"])
     bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('👀')])
 
     if is_single_video_platform:
@@ -445,6 +448,11 @@ def process_new_download(message: Message, url: str):
                     util.download_video_720(util.get_yt_video_url(util.get_yt_video_id(url)), filename)
                 else:
                     util.download_video(util.get_yt_video_url(util.get_yt_video_id(url)), filename)
+            elif "twitch.tv" in url:
+                if util.is_video_longer_than(url, 45):
+                    util.download_video_720(url, filename)
+                else:
+                    util.download_video_1080(url, filename)
             else:
                 util.download_video(url, filename)
 
@@ -452,15 +460,28 @@ def process_new_download(message: Message, url: str):
             if file_path.exists():
                 if util.is_file_smaller_than_50mb(str(file_path)):
                     with file_path.open('rb') as video_file:
-                        resp = bot.send_video(
-                            chat_id=message.chat.id,
-                            video=video_file,
-                            supports_streaming=True,
-                            caption=f"Here's your [video]({url}) >w<",
-                            parse_mode="Markdown",
-                            reply_to_message_id=message.message_id,
-                            reply_markup=botTools.gen_spoiler_markup_with_audio(util.get_platform_video_id(url))
-                        )
+                        if any(x in url for x in ["youtube.com", "youtu.be"]):
+                            resp = bot.send_video(
+                                chat_id=message.chat.id,
+                                video=video_file,
+                                supports_streaming=True,
+                                caption=f"Here's your [video]({url}) >w<",
+                                parse_mode="Markdown",
+                                reply_to_message_id=message.message_id,
+                                reply_markup=botTools.gen_spoiler_markup_with_audio(util.get_platform_video_id(url)),
+                                timeout=100
+                            )
+                        else:
+                            resp = bot.send_video(
+                                chat_id=message.chat.id,
+                                video=video_file,
+                                supports_streaming=True,
+                                caption=f"Here's your [video]({url}) >w<",
+                                parse_mode="Markdown",
+                                reply_to_message_id=message.message_id,
+                                reply_markup=botTools.gen_spoiler_markup(),
+                                timeout=100
+                            )
                     # Save to DB
                     dbtools.add_video(resp.video.file_id, util.get_platform_video_id(url), util.get_platform(url))
                     bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('👌')])
@@ -482,6 +503,7 @@ def process_new_download(message: Message, url: str):
         finally:
             if file_path.exists():
                 file_path.unlink()
+
     else:
         try:
             process_gallery_download(message, url)
