@@ -17,7 +17,7 @@ def register_commands(bot: TeleBot, cube_toro_file_id: str):
             - Instagram
             - Tiktok
             - Twitter (X)
-            - Reddit (supports only videos)
+            - Reddit
             - Danbooru
             - Safebooru
             - Bigrat.monster
