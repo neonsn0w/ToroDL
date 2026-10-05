@@ -12,6 +12,8 @@ class Test(TestCase):
         "https://safebooru.org/index.php?page=post&s=view&id=6734655": "6734655",
         "https://safebooru.donmai.us/posts/11255569": "11255569",
         "https://www.twitch.tv/perozofficialtv/clip/HonestPlacidMarrowKevinTurtle?range=all": "HonestPlacidMarrowKevinTurtle",
+        "https://www.bilibili.com/video/BV1fsY267ExU/?trackid=web_pegasus_0.router-web-pegasus-2479516-gfll4.1790632878432.526&spm_id_from=333.1007.tianma.11-3-41.click": "BV1fsY267ExU",
+        "https://b23.tv/BV1pvaz6eE4P": "BV1pvaz6eE4P",
     }
 
     def test_validate_url(self):

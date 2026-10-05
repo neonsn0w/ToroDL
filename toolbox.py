@@ -227,9 +227,12 @@ def validate_url(url: str) -> bool:
         r'|(?:permalink|story)\.php\?[^#\s]*story_fbid='
         r')',
         r'fb\.watch/[a-zA-Z0-9_-]+',
-        
+
         # Twitch clips
         r'(?:clips\.twitch\.tv/|twitch\.tv/[^/]+/clip/)[^/?\s]+',
+
+        # Bilibili videos
+        r"^https?://(?:(?:www\.|m\.)?bilibili\.com/(?:video/(?:BV[A-Za-z0-9]+|av\d+)|bangumi/play/(?:ep\d+|ss\d+))|b23\.tv/[A-Za-z0-9]+)(?:[/?#].*)?$",
     ]
 
     for pattern in patterns:
@@ -406,8 +409,27 @@ def get_facebook_post_id(url: str) -> str | None:
 
     return None
 
+
 def get_twitch_clip_id(url: str) -> str:
     return re.search(r'(?:clips\.twitch\.tv/|/clip/)([^/?]+)', url).group(1)
+
+
+def get_bilibili_video_id(url: str) -> str:
+    if not validate_url(url):
+        return "-1"
+
+    if "/video/" in url:
+        return re.search(r"bilibili\.com/video/(BV[A-Za-z0-9]+|av\d+)", url).group(1)
+    elif "/bangumi/" in url:
+        return re.search(r"bilibili\.com/bangumi/play/(ep\d+|ss\d+)", url).group(1)
+    else:
+        return re.search(r"b23\.tv/([A-Za-z0-9]+)", url).group(1)
+
+def unshorten_b23_url(url: str) -> str:
+    if "b23.tv" in url:
+        return "https://www.bilibili.com/video/" + get_bilibili_video_id(url)
+
+    return "-1"
 
 def get_platform_video_id(url: str) -> str:
     if "youtube.com" in url or "youtu.be" in url:
@@ -428,6 +450,8 @@ def get_platform_video_id(url: str) -> str:
         return get_facebook_post_id(url)
     elif "twitch.tv" in url:
         return get_twitch_clip_id(url)
+    elif "bilibili.com" in url or "b23.tv" in url:
+        return get_bilibili_video_id(url)
     else:
         return "-1"
 
@@ -451,6 +475,8 @@ def get_platform(url: str) -> str:
         return "facebook"
     elif "twitch.tv" in url:
         return "twitch"
+    elif "bilibili.com" in url or "b23.tv" in url:
+        return "bilibili"
     else:
         return "-1"
 
@@ -478,6 +504,8 @@ def get_filename(url: str, ext: str) -> str:
             return get_facebook_post_id(url) + "." + ext
         elif "twitch.tv" in url:
             return get_twitch_clip_id(url) + "." + ext
+        elif "bilibili.com" in url or "b23.tv" in url:
+            return get_bilibili_video_id(url) + "." + ext
         else:
             return "-1"
     except Exception as e:
@@ -495,6 +523,9 @@ def is_video_longer_than(url: str, time: int) -> bool:
         "extract_flat": True,  # Faster metadata fetch
         "cookiefile": "cookies.txt",
     }
+
+    if "b23.tv" in url:
+        url = unshorten_b23_url(url)
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
@@ -546,6 +577,7 @@ def download_video_720(link: str, filename: str):
     }
     with yt_dlp.YoutubeDL(youtube_dl_options) as ydl:
         return ydl.download([link])
+
 
 def download_video_1080(link: str, filename: str):
     youtube_dl_options = {

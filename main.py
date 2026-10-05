@@ -99,29 +99,52 @@ def inline_handler(query):
             download_event.wait(timeout=60)
         else:
             try:
-                if "youtube.com" in url or "youtu.be" in url:
-                    try:
-                        yt_url = util.get_yt_video_url(util.get_yt_video_id(url))
-                        if util.is_video_longer_than(yt_url, 600):  # 10 mins
-                            results.append(InlineQueryResultArticle(
-                                id=str(uuid.uuid4()),
-                                title="🤯 Video too long",
-                                description="Videos longer than 10 minutes are not supported.",
-                                input_message_content=InputTextMessageContent(
-                                    "The video you tried to download is longer than 10 minutes.")
-                            ))
-                            bot.answer_inline_query(query.id, results)
+                if "youtube.com" in url or "youtu.be" in url or "bilibili.com" in url or "b23.tv" in url or "twitch.tv" in url:
+                    if "youtube.com" in url or "youtu.be" in url:
+                        try:
+                            yt_url = util.get_yt_video_url(util.get_yt_video_id(url))
+                            if util.is_video_longer_than(yt_url, 600):  # 10 mins
+                                results.append(InlineQueryResultArticle(
+                                    id=str(uuid.uuid4()),
+                                    title="🤯 Video too long",
+                                    description="Videos longer than 10 minutes are not supported.",
+                                    input_message_content=InputTextMessageContent(
+                                        "The video you tried to download is longer than 10 minutes.")
+                                ))
+                                bot.answer_inline_query(query.id, results)
+                                return
+                        except Exception:
                             return
-                    except Exception:
-                        return
+                    elif "bilibili.com" in url or "b23.tv" in url:
+                        try:
+                            if util.is_video_longer_than(url, 600):  # 10 mins
+                                results.append(InlineQueryResultArticle(
+                                    id=str(uuid.uuid4()),
+                                    title="🤯 Video too long",
+                                    description="Videos longer than 10 minutes are not supported.",
+                                    input_message_content=InputTextMessageContent(
+                                        "The video you tried to download is longer than 10 minutes.")
+                                ))
+                                bot.answer_inline_query(query.id, results)
+                                return
+                        except Exception:
+                            return
 
                     file_path = Path("yt-dlp-downloads/" + filename)
 
                     try:
-                        if util.is_video_longer_than(url, 150):
-                            util.download_video_720(util.get_yt_video_url(util.get_yt_video_id(url)), filename)
+                        if "youtu" in url:
+                            if util.is_video_longer_than(url, 150):
+                                util.download_video_720(util.get_yt_video_url(util.get_yt_video_id(url)), filename)
+                            else:
+                                util.download_video(util.get_yt_video_url(util.get_yt_video_id(url)), filename)
+                        elif "twitch.tv" in url:
+                            if util.is_video_longer_than(url, 45):
+                                util.download_video_720(url, filename)
+                            else:
+                                util.download_video_1080(url, filename)
                         else:
-                            util.download_video(util.get_yt_video_url(util.get_yt_video_id(url)), filename)
+                            util.download_video_720(url, filename)
                     except Exception as e:
                         logger.error(f"Single video error: {e}")
                         botTools.send_message_to_admin(bot, ADMIN_USER_ID,
@@ -423,6 +446,14 @@ def echo_all(message):
         except Exception:
             return
 
+    if "bilibili.com" in url or "b23.tv" in url:
+        try:
+            if util.is_video_longer_than(url, 600):  # 10 mins
+                bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('🤯')])
+                return
+        except Exception:
+            return
+
     process_new_download(message, url)
 
 
@@ -431,7 +462,7 @@ def echo_all(message):
 def process_new_download(message: Message, url: str):
     """Orchestrates the download of content from supported platforms."""
 
-    is_single_video_platform = any(x in url for x in ["youtube.com", "youtu.be", "twitch.tv"])
+    is_single_video_platform = any(x in url for x in ["youtube.com", "youtu.be", "twitch.tv", "bilibili.com", "b23.tv"])
     bot.set_message_reaction(message.chat.id, message.id, [ReactionTypeEmoji('👀')])
 
     if is_single_video_platform:
@@ -454,7 +485,7 @@ def process_new_download(message: Message, url: str):
                 else:
                     util.download_video_1080(url, filename)
             else:
-                util.download_video(url, filename)
+                util.download_video_720(url, filename)
 
             # Upload
             if file_path.exists():
