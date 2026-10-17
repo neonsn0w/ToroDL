@@ -175,11 +175,11 @@ def check_instagram_cookie_file(file_path: str) -> dict:
 
 
 def delete_dead_ig_cookies(bot, admin_user_id, folder_path: str = "igcookies"):
-    for cookie in os.listdir(folder_path):
-        result = check_instagram_cookie_file(folder_path + "/" + cookie)
-        if result["status"] != "VALID" and result["message"] != "RATE_LIMITED":
-            send_message_to_admin(bot, admin_user_id, f"Deleting:\n{cookie}\n{result['status']}\n{result['message']}")
-            os.remove(folder_path + "/" + cookie)
+    cookie = sorted(os.listdir(folder_path))[0]
+    result = check_instagram_cookie_file(folder_path + "/" + cookie)
+    if result["status"] != "VALID" and result["message"] != "RATE_LIMITED":
+        send_message_to_admin(bot, admin_user_id, f"Deleting:\n{cookie}\n{result['status']}\n{result['message']}")
+        os.remove(folder_path + "/" + cookie)
 
     send_message_to_admin(bot, admin_user_id,
                           f"Performed a cookie check.\n\nCookies in directory: {len(os.listdir(folder_path))}")
@@ -593,10 +593,11 @@ def download_media(url: str):
     global cindex
     config.load()  # config file is in /etc/gallery-dl.conf or %APPDATA%\gallery-dl\config.json
     if "instagram" in url:
-        cookies = os.listdir('igcookies')
-        cindex = cindex + 1
-        if cindex >= len(cookies):
-            cindex = 0
+        cookies = sorted(os.listdir('igcookies'))
+        # cindex = cindex + 1
+        # if cindex >= len(cookies):
+        #     cindex = 0
+        cindex = 0
         with open(f'./igcookies/{cookies[cindex]}', 'r') as cookiefile:
             cstr = cookiefile.read()
         logging.info(f'using cookie {cookies[cindex]}')
