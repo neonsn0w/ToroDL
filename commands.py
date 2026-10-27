@@ -6,7 +6,7 @@ from telebot import TeleBot
 from telebot.types import Message, ReactionTypeEmoji
 
 
-def register_commands(bot: TeleBot, cube_toro_file_id: str):
+def register_commands(bot: TeleBot):
     def start(message: Message):
         start_text: str = textwrap.dedent("""
             Hello!
@@ -40,7 +40,6 @@ def register_commands(bot: TeleBot, cube_toro_file_id: str):
             But if you *really* want some commands, here are some not-so-useful ones:
             - /cat - Get a random cat picture
             - /httpcat XXX - Remember the meaning of a specific HTTP code through cat pictures
-            - /cube - Take a look at a beautiful fanart
             """)
 
         bot.reply_to(messsage, help_text, parse_mode="Markdown")
@@ -53,15 +52,6 @@ def register_commands(bot: TeleBot, cube_toro_file_id: str):
             bot.send_photo(message.chat.id, f, reply_to_message_id=message.message_id)
 
         os.remove("catpic.cat")
-
-    def send_cube_pic(message: Message):
-        """Send a very cute fanart of Toro inside a Gamecube."""
-        # Thank you lucabeagle510
-
-        if cube_toro_file_id:
-            bot.send_photo(message.chat.id, cube_toro_file_id,
-                           caption="Art by https://www.instagram.com/lucabeagle510/\n\nThank you so much!",
-                           reply_to_message_id=message.message_id)
 
     def send_httpcat_pic(message: Message):
         notfound = False
@@ -98,5 +88,4 @@ def register_commands(bot: TeleBot, cube_toro_file_id: str):
     bot.register_message_handler(start, commands=['start'], chat_types=['private'])
     bot.register_message_handler(help_command, commands=['help', 'commands', 'command'], chat_types=['private'])
     bot.register_message_handler(send_random_cat_pic, commands=['cat'])
-    bot.register_message_handler(send_cube_pic, commands=['cube'])
     bot.register_message_handler(send_httpcat_pic, commands=['httpcat'])

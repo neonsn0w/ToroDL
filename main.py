@@ -51,11 +51,10 @@ dbtools.prepare_db()  # Creates the DB if not present
 
 BIGRAT_FILE_ID = botTools.get_photo_file_id(bot, "img/bigrat.jpg", PRIVATE_CHANNEL_ID)
 SAD_TORO_FILE_ID = botTools.get_photo_file_id(bot, "img/toro-sad-256.png", PRIVATE_CHANNEL_ID)
-CUBE_TORO_FILE_ID = botTools.get_photo_file_id(bot, "img/cube.png", PRIVATE_CHANNEL_ID)
 
 MAX_DESCRIPTION_LENGTH = 900
 
-commands.register_commands(bot, CUBE_TORO_FILE_ID)
+commands.register_commands(bot)
 
 active_downloads = {}
 download_lock = threading.Lock()
