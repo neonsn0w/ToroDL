@@ -600,7 +600,6 @@ def configure_gallery_dl(url: str):
     # Twitter
     config.set(("extractor", "twitter"), "videos", "ytdl")
     config.set(("extractor", "twitter"), "transaction-id", False)
-    config.set(("extractor", "twitter"), "user-agent", "browser")
     config.set(("extractor", "twitter"), "postprocessors", [
         {
             "name": "metadata",
