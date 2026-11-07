@@ -8,6 +8,7 @@ import requests
 import shutil
 import yt_dlp
 from gallery_dl import config, job
+from gallery_dl.extractor.twitter import TwitterAPI
 from typing import List, Any, Union
 from urllib.parse import urlparse, parse_qs
 
@@ -598,6 +599,7 @@ def configure_gallery_dl(url: str):
     ])
 
     # Twitter
+    TwitterAPI._transaction_id = lambda self, url, method="GET": None
     config.set(("extractor", "twitter"), "videos", "ytdl")
     config.set(("extractor", "twitter"), "tweet-endpoint", "restid")
     config.set(("extractor", "twitter"), "postprocessors", [
