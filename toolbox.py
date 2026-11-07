@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 cindex = 0
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__)) # Path where the actual script lives (not the working dir)
+
 SUPPORTED_WEBSITES = [
     "youtube.com",
     "youtu.be",
@@ -540,6 +542,92 @@ def is_video_longer_than(url: str, time: int) -> bool:
             return True
 
 
+def configure_gallery_dl(url: str):
+    global cindex
+
+    # Reset internal config dictionary
+    config.clear()
+
+    video_id = get_platform_video_id(url)
+    platform = get_platform(url)
+
+    # Content is downloaded in ./media-downloads/platform/video_id/video_id_N.ext
+    config.set(("extractor",), "base-directory", "media-downloads")
+    config.set(("extractor",), "archive", None)
+    config.set(("extractor",), "directory", [platform, video_id])
+    config.set(("extractor",), "filename", f"{video_id}_{{num}}.{{extension}}")
+
+    # Description download settings, description metadata is in video_id.txt
+    config.set(("postprocessor", "metadata"), "module", "metadata")
+    config.set(("postprocessor", "metadata"), "event", "post")
+    config.set(("postprocessor", "metadata"), "filename", f"{video_id}.txt")
+    config.set(("postprocessor", "metadata"), "content", "{content or description}")
+
+    # Instagram
+    config.set(("extractor", "instagram"), "videos", "ytdl")
+    config.set(("extractor", "instagram"), "ytdl", {"format": "avc1"})
+    config.set(("extractor", "instagram"), "ytdl-args", [
+        "-f", "bv[ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4]"
+    ])
+    config.set(("extractor", "instagram"), "postprocessors", [
+        {
+            "name": "metadata",
+            "extension": "txt",
+            "content": "{content|description|caption}"
+        }
+    ])
+
+    # TikTok
+    config.set(("extractor", "tiktok"), "videos", "ytdl")
+    config.set(("extractor", "tiktok"), "postprocessors", [
+        {
+            "name": "metadata",
+            "extension": "txt",
+            "content": "{description|caption}"
+        }
+    ])
+
+    # Reddit
+    config.set(("extractor", "reddit"), "videos", "ytdl")
+    config.set(("extractor", "reddit"), "postprocessors", [
+        {
+            "name": "metadata",
+            "extension": "txt",
+            "content": "{description|caption|title}"
+        }
+    ])
+
+    # Twitter
+    config.set(("extractor", "twitter"), "videos", "ytdl")
+    config.set(("extractor", "twitter"), "transaction-id", False)
+    config.set(("extractor", "twitter"), "user-agent", "browser")
+    config.set(("extractor", "twitter"), "postprocessors", [
+        {
+            "name": "metadata",
+            "extension": "txt",
+            "content": "{description|caption|title}"
+        },
+        {
+            "name": "exec",
+            "event": "after",
+            "filter": "type == 'animated_gif'",
+            "command": 'FILE="{_path}"; ffmpeg -y -i "$FILE" "${FILE%.*}.gif" && rm "$FILE"'
+        }
+    ])
+
+    # Cookie configuration, Instagram sequentially uses cookies from the igcookies directory, Instagram cookies can expire very quickly ;-;
+    if "instagram" in url:
+        ig_dir = os.path.join(BASE_DIR, "igcookies")
+        cookies = sorted(os.listdir(ig_dir))
+        cindex = 0
+        cookie_path = os.path.join(ig_dir, cookies[cindex])
+        logging.info(f"Using cookie {cookies[cindex]}")
+        config.set(("extractor", "instagram"), "cookies", cookie_path)
+    else:
+        cookie_path = os.path.join(BASE_DIR, "cookies.txt")
+        config.set(("extractor",), "cookies", cookie_path)
+        config.set(("extractor", "twitter"), "cookies", cookie_path)
+
 def download_video(link: str, filename: str):
     youtube_dl_options = {
         "format": "bv[ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4]",
@@ -590,33 +678,9 @@ def download_video_1080(link: str, filename: str):
 
 
 def download_media(url: str):
-    global cindex
-    config.load()  # config file is in /etc/gallery-dl.conf or %APPDATA%\gallery-dl\config.json
-    if "instagram" in url:
-        cookies = sorted(os.listdir('igcookies'))
-        # cindex = cindex + 1
-        # if cindex >= len(cookies):
-        #     cindex = 0
-        cindex = 0
-        with open(f'./igcookies/{cookies[cindex]}', 'r') as cookiefile:
-            cstr = cookiefile.read()
-        logging.info(f'using cookie {cookies[cindex]}')
-        config.set(("extractor",), "cookies", f'./igcookies/{cookies[cindex]}')
-    else:
-        config.set(("extractor",), "cookies", "cookies.txt")
-    config.set(("extractor",), "directory", [get_platform(url), get_platform_video_id(url)])
-    config.set(("extractor",), "filename", get_platform_video_id(url) + "_{num}.{extension}")
-
-    config.set(("postprocessor", "metadata"), "module", "metadata")
-
-    config.set(("postprocessor", "metadata"), "event", "post")
-    config.set(("postprocessor", "metadata"), "filename", get_platform_video_id(url) + ".txt")
-    config.set(("postprocessor", "metadata"), "content", "{content or description}")
-
+    configure_gallery_dl(url)
     j = job.DownloadJob(url)
-
     j.run()
-
 
 def is_file_smaller_than_50mb(file_path: str) -> bool:
     return os.path.getsize(file_path) < 50 * 1024 * 1024
