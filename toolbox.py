@@ -599,7 +599,7 @@ def configure_gallery_dl(url: str):
 
     # Twitter
     config.set(("extractor", "twitter"), "videos", "ytdl")
-    config.set(("extractor", "twitter"), "transaction-id", False)
+    config.set(("extractor", "twitter"), "tweet-endpoint", "restid")
     config.set(("extractor", "twitter"), "postprocessors", [
         {
             "name": "metadata",
