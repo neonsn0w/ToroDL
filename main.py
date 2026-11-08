@@ -71,6 +71,8 @@ def inline_handler(query):
     if not url:
         return
 
+    url = util.unfix_url(url)
+
     if not util.validate_url(url):
         return
 
@@ -425,6 +427,8 @@ def echo_all(message):
     if util.check_if_mp4_url(url):
         process_direct_mp4(message, url)
         return
+
+    url = util.unfix_url(url)
 
     if not util.validate_url(url):
         return

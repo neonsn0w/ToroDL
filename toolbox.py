@@ -10,15 +10,16 @@ import yt_dlp
 from gallery_dl import config, job
 from gallery_dl.extractor.twitter import TwitterAPI
 from typing import List, Any, Union
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, urlsplit, urlunsplit
 
 from botTools import send_message_to_admin
+from xEmbedFixers import X_EMBED_FIXERS
 
 logger = logging.getLogger(__name__)
 
 cindex = 0
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__)) # Path where the actual script lives (not the working dir)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # Path where the actual script lives (not the working dir)
 
 SUPPORTED_WEBSITES = [
     "youtube.com",
@@ -264,6 +265,22 @@ def extract_https_url(text: str) -> str:
     return match.group(0) if match else None
 
 
+def unfix_url(url: str) -> str:
+    """Replaces Twitter/X embed fixer domains with x.com"""
+    parts = urlsplit(url)
+    host = (parts.hostname or "").lower()
+
+    if host.startswith("www."):  # Just in case...
+        host = host[4:]
+
+    is_fixer = any(host == d or host.endswith("." + d) for d in X_EMBED_FIXERS)
+    if not is_fixer:
+        return url
+
+    new_url = urlunsplit(parts._replace(netloc="x.com"))
+    return str(new_url)
+
+
 def cleanup_mp4_url(url: str) -> str:
     return url.split('?')[0]
 
@@ -428,11 +445,13 @@ def get_bilibili_video_id(url: str) -> str:
     else:
         return re.search(r"b23\.tv/([A-Za-z0-9]+)", url).group(1)
 
+
 def unshorten_b23_url(url: str) -> str:
     if "b23.tv" in url:
         return "https://www.bilibili.com/video/" + get_bilibili_video_id(url)
 
     return "-1"
+
 
 def get_platform_video_id(url: str) -> str:
     if "youtube.com" in url or "youtu.be" in url:
@@ -629,6 +648,7 @@ def configure_gallery_dl(url: str):
         config.set(("extractor",), "cookies", cookie_path)
         config.set(("extractor", "twitter"), "cookies", cookie_path)
 
+
 def download_video(link: str, filename: str):
     youtube_dl_options = {
         "format": "bv[ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4]",
@@ -682,6 +702,7 @@ def download_media(url: str):
     configure_gallery_dl(url)
     j = job.DownloadJob(url)
     j.run()
+
 
 def is_file_smaller_than_50mb(file_path: str) -> bool:
     return os.path.getsize(file_path) < 50 * 1024 * 1024
