@@ -1,5 +1,5 @@
 from unittest import TestCase
-from toolbox import validate_url, get_platform_video_id
+from toro.urls import validate_url, get_platform_video_id
 
 
 class Test(TestCase):
