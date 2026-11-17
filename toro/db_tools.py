@@ -2,7 +2,7 @@ import sqlite3
 
 
 def prepare_db():
-    connection = sqlite3.connect('video_ids.db')
+    connection = sqlite3.connect('../video_ids.db')
     cursor = connection.cursor()
 
     cursor.execute("""
@@ -48,7 +48,7 @@ def prepare_db():
 
 
 def get_number_of_media_by_platform_id(platform_id: str) -> int:
-    connection = sqlite3.connect('video_ids.db')
+    connection = sqlite3.connect('../video_ids.db')
     cursor = connection.cursor()
     cursor.execute(f"""
                    SELECT COUNT(*)
@@ -59,7 +59,7 @@ def get_number_of_media_by_platform_id(platform_id: str) -> int:
 
 
 def get_number_of_descriptions_by_platform_id(platform_id: str) -> int:
-    connection = sqlite3.connect('video_ids.db')
+    connection = sqlite3.connect('../video_ids.db')
     cursor = connection.cursor()
     cursor.execute(f"""
                    SELECT COUNT(*)
@@ -70,7 +70,7 @@ def get_number_of_descriptions_by_platform_id(platform_id: str) -> int:
 
 
 def add_video(file_id: str, platform_id: str, platform: str):
-    connection = sqlite3.connect('video_ids.db')
+    connection = sqlite3.connect('../video_ids.db')
     try:
         cursor = connection.cursor()
         cursor.execute(f"""
@@ -83,7 +83,7 @@ def add_video(file_id: str, platform_id: str, platform: str):
 
 
 def add_photo(file_id: str, platform_id: str, platform: str):
-    connection = sqlite3.connect('video_ids.db')
+    connection = sqlite3.connect('../video_ids.db')
     try:
         cursor = connection.cursor()
         cursor.execute(f"""
@@ -96,7 +96,7 @@ def add_photo(file_id: str, platform_id: str, platform: str):
 
 
 def add_gif(file_id: str, platform_id: str, platform: str):
-    connection = sqlite3.connect('video_ids.db')
+    connection = sqlite3.connect('../video_ids.db')
     try:
         cursor = connection.cursor()
         cursor.execute(f"""
@@ -109,7 +109,7 @@ def add_gif(file_id: str, platform_id: str, platform: str):
 
 
 def add_sound(file_id: str, platform_id: str, platform: str):
-    connection = sqlite3.connect('video_ids.db')
+    connection = sqlite3.connect('../video_ids.db')
     try:
         cursor = connection.cursor()
         cursor.execute(f"""
@@ -122,7 +122,7 @@ def add_sound(file_id: str, platform_id: str, platform: str):
 
 
 def add_description(description: str, platform_id: str, platform: str):
-    connection = sqlite3.connect('video_ids.db')
+    connection = sqlite3.connect('../video_ids.db')
     try:
         cursor = connection.cursor()
         query = ("""
@@ -136,7 +136,7 @@ def add_description(description: str, platform_id: str, platform: str):
 
 
 def get_first_media(platform_id: str):
-    connection = sqlite3.connect('video_ids.db')
+    connection = sqlite3.connect('../video_ids.db')
     cursor = connection.cursor()
     cursor.execute(f"""
                    SELECT *
@@ -147,7 +147,7 @@ def get_first_media(platform_id: str):
 
 
 def get_first_sound(platform_id: str):
-    connection = sqlite3.connect('video_ids.db')
+    connection = sqlite3.connect('../video_ids.db')
     cursor = connection.cursor()
     cursor.execute(f"""
                    SELECT *
@@ -157,7 +157,7 @@ def get_first_sound(platform_id: str):
     return cursor.fetchone()
 
 def get_first_description(platform_id: str):
-    connection = sqlite3.connect('video_ids.db')
+    connection = sqlite3.connect('../video_ids.db')
     cursor = connection.cursor()
     cursor.execute(f"""
                    SELECT *
@@ -168,7 +168,7 @@ def get_first_description(platform_id: str):
 
 
 def get_all_media(platform_id: str):
-    connection = sqlite3.connect('video_ids.db')
+    connection = sqlite3.connect('../video_ids.db')
     cursor = connection.cursor()
     cursor.execute(f"""
                    SELECT *

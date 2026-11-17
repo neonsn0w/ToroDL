@@ -5,7 +5,7 @@ from pathlib import Path
 
 import requests
 
-from bot_tools import send_message_to_admin
+from toro.bot_tools import send_message_to_admin
 
 
 def check_instagram_cookie_file(file_path: str) -> dict:

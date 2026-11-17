@@ -20,12 +20,8 @@ from telebot.types import InputMediaPhoto, InputMediaVideo, Message, InputMediaD
     CallbackQuery, InlineQueryResultPhoto, InlineQueryResultDocument, InlineQueryResultVideo, InlineQueryResultArticle, \
     InputTextMessageContent
 
-import bot_tools
-import commands
-import db_tools
-import exceptions
-import ig_extractor
-from toro import urls, downloads, instagram_cookies, file_tools, captions
+from toro import urls, downloads, instagram_cookies, file_tools, captions, bot_tools, db_tools, ig_extractor, \
+    exceptions, commands
 
 # --- Setup ---
 
